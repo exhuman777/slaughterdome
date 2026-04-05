@@ -1,4 +1,4 @@
-import { MAX_PLAYERS, ROOM_CLEANUP_MS, PLAYER, ARENA_RADIUS } from './config.js';
+import { MAX_PLAYERS, ROOM_CLEANUP_MS, PLAYER, ARENA_RADIUS, WALL } from './config.js';
 
 let nextRoomId = 1;
 let nextPlayerId = 1;
@@ -15,6 +15,8 @@ export class Room {
     this.enemies = new Map();
     this.pickups = new Map();
     this.projectiles = new Map();
+    this.walls = new Map();
+    this.arenaRadius = ARENA_RADIUS;
     this.tick = 0;
     this.waveTimer = 0;
     this.cleanupTimer = null;
@@ -33,8 +35,9 @@ export class Room {
       x: Math.cos(angle) * 5, z: Math.sin(angle) * 5,
       hp: PLAYER.hp, maxHp: PLAYER.hp, alive: true,
       buffs: {}, kills: 0,
-      input: { dx: 0, dz: 0, attack: false, special: false, aimX: 0, aimZ: 0 },
-      meleeCooldown: 0, specialCooldown: 0,
+      input: { dx: 0, dz: 0, attack: false, special: false, aimX: 0, aimZ: 0, wall: false },
+      shootCooldown: 0, specialCooldown: 0,
+      wallCharges: WALL.charges, wallPlaceCooldown: 0, wallRechargeTimer: 0,
     };
     this.players.set(id, player);
     if (this.cleanupTimer) { clearTimeout(this.cleanupTimer); this.cleanupTimer = null; }
@@ -79,7 +82,7 @@ export class Room {
       enemies.push({
         id: e.id, type: e.type,
         pos: [Math.round(e.x * 100) / 100, 0, Math.round(e.z * 100) / 100],
-        hp: e.hp, state: e.aiState,
+        hp: e.hp, maxHp: e.maxHp, state: e.aiState,
       });
     }
     const pickups = [];
@@ -90,10 +93,15 @@ export class Room {
     for (const [, pr] of this.projectiles) {
       projectiles.push({ id: pr.id, pos: [pr.x, 0, pr.z], vel: [pr.vx, 0, pr.vz], type: pr.type });
     }
+    const walls = [];
+    for (const [, w] of this.walls) {
+      walls.push({ id: w.id, pos: [w.x, 0, w.z], angle: w.angle, hp: w.hp, maxHp: w.maxHp });
+    }
     return {
       t: 'state', tick: this.tick,
-      players, enemies, pickups, projectiles,
+      players, enemies, pickups, projectiles, walls,
       wave: this.wave, score: this.score, combo: this.combo, phase: this.state,
+      arenaRadius: this.arenaRadius,
     };
   }
 }

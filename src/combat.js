@@ -1,42 +1,100 @@
 import * as THREE from 'https://esm.sh/three@0.162.0';
 import { scene } from './renderer.js';
-import { spawnAoeRing, spawnFloatingText } from './particles.js';
+import { spawnAoeRing, spawnFloatingText, spawnSparks } from './particles.js';
 
-const swings = [];
+const effects = [];
 
-export function showMeleeSwing(x, z, angle) {
-  const arcGeo = new THREE.TorusGeometry(1.5, 0.05, 4, 16, Math.PI / 2);
-  const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 });
-  const mesh = new THREE.Mesh(arcGeo, mat);
-  mesh.position.set(x, 0.8, z);
-  mesh.rotation.set(Math.PI / 2, 0, -angle - Math.PI / 4);
-  scene.add(mesh);
-  swings.push({ mesh, mat, life: 0.2 });
+export function showGunShot(px, pz, angle) {
+  const fx = px + Math.cos(angle) * 0.8;
+  const fz = pz + Math.sin(angle) * 0.8;
+
+  // Muzzle flash sphere
+  const flashGeo = new THREE.SphereGeometry(0.3, 8, 8);
+  const flashMat = new THREE.MeshBasicMaterial({ color: 0xffffcc, transparent: true, opacity: 1 });
+  const flash = new THREE.Mesh(flashGeo, flashMat);
+  flash.position.set(fx, 1.2, fz);
+  scene.add(flash);
+  effects.push({ mesh: flash, mat: flashMat, life: 0.06, maxLife: 0.06 });
+
+  // Ground light circle
+  const groundGeo = new THREE.CircleGeometry(0.6, 8);
+  groundGeo.rotateX(-Math.PI / 2);
+  const groundMat = new THREE.MeshBasicMaterial({ color: 0xffffaa, transparent: true, opacity: 0.5, side: THREE.DoubleSide });
+  const ground = new THREE.Mesh(groundGeo, groundMat);
+  ground.position.set(fx, 0.05, fz);
+  scene.add(ground);
+  effects.push({ mesh: ground, mat: groundMat, life: 0.05, maxLife: 0.05 });
+
+  // Directional muzzle sparks
+  spawnSparks(fx, fz, 0xffdd44, 3);
 }
 
 export function showSpecialAttack(x, z) {
-  spawnAoeRing(x, z, 4, 0xffaa00);
+  spawnAoeRing(x, z, 5, 0xffaa00);
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    const beamGeo = new THREE.PlaneGeometry(5, 0.2);
+    const beamMat = new THREE.MeshBasicMaterial({ color: 0xffcc33, transparent: true, opacity: 0.7, side: THREE.DoubleSide });
+    const beam = new THREE.Mesh(beamGeo, beamMat);
+    beam.position.set(x, 0.3, z);
+    beam.rotation.set(Math.PI / 2, 0, a);
+    scene.add(beam);
+    effects.push({ mesh: beam, mat: beamMat, life: 0.25, maxLife: 0.25 });
+  }
+  const flashGeo = new THREE.CircleGeometry(1.5, 16);
+  flashGeo.rotateX(-Math.PI / 2);
+  const flashMat = new THREE.MeshBasicMaterial({ color: 0xffffaa, transparent: true, opacity: 1, side: THREE.DoubleSide });
+  const flash = new THREE.Mesh(flashGeo, flashMat);
+  flash.position.set(x, 0.2, z);
+  scene.add(flash);
+  effects.push({ mesh: flash, mat: flashMat, life: 0.2, maxLife: 0.2, expandRate: 8 });
 }
 
+let dmgSlot = 0;
+const DMG_OFFSETS = [
+  [-1.5, -1], [1.5, -0.5], [-0.5, 1.2], [1.2, 0.8],
+  [-1.8, 0.3], [0.3, -1.5], [1.8, 1.2], [-1, 1.5],
+];
+
 export function showDamageNumber(x, z, dmg, crit) {
-  const color = crit ? '#ffff00' : '#ffffff';
-  const text = crit ? dmg + '!' : '' + dmg;
-  spawnFloatingText(x + (Math.random() - 0.5), z + (Math.random() - 0.5), text, color);
+  const color = crit ? '#ffff44' : '#ffffff';
+  const text = crit ? 'CRIT ' + dmg + '!' : '' + dmg;
+  const off = DMG_OFFSETS[dmgSlot % DMG_OFFSETS.length];
+  dmgSlot++;
+  spawnFloatingText(x + off[0], z + off[1], text, color, crit ? 2.5 : 1.5);
+  if (crit) spawnSparks(x, z, 0xffff44, 12);
 }
 
 export function showExplosion(x, z, radius) {
-  spawnAoeRing(x, z, radius, 0xff4400);
+  spawnAoeRing(x, z, radius * 1.5, 0xff4400);
+  spawnSparks(x, z, 0xff6600, 20);
+  const geo = new THREE.CircleGeometry(radius, 16);
+  geo.rotateX(-Math.PI / 2);
+  const mat = new THREE.MeshBasicMaterial({ color: 0xff8800, transparent: true, opacity: 1, side: THREE.DoubleSide });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(x, 0.3, z);
+  scene.add(mesh);
+  effects.push({ mesh, mat, life: 0.3, maxLife: 0.3, expandRate: 5 });
+}
+
+export function showHitImpact(x, z) {
+  spawnSparks(x, z, 0xffffff, 8);
 }
 
 export function updateCombatVisuals(dt) {
-  for (let i = swings.length - 1; i >= 0; i--) {
-    const s = swings[i];
-    s.life -= dt;
-    s.mat.opacity = Math.max(0, s.life / 0.2);
-    if (s.life <= 0) {
-      scene.remove(s.mesh);
-      s.mat.dispose();
-      swings.splice(i, 1);
+  for (let i = effects.length - 1; i >= 0; i--) {
+    const e = effects[i];
+    e.life -= dt;
+    const t = Math.max(0, e.life / e.maxLife);
+    e.mat.opacity = t;
+    if (e.expandRate) {
+      const s = 1 + (1 - t) * e.expandRate;
+      e.mesh.scale.set(s, s, 1);
+    }
+    if (e.life <= 0) {
+      scene.remove(e.mesh);
+      e.mat.dispose();
+      effects.splice(i, 1);
     }
   }
 }

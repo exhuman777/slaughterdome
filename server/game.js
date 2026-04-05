@@ -1,13 +1,15 @@
 import {
   TICK_MS, TICK_RATE, ARENA_RADIUS, PLAYER, COMBO_DECAY_MS, COMBO_TIERS,
   PICKUP_DROP_BASE, PICKUP_DROP_COMBO_BONUS, PICKUP_DESPAWN_MS, PICKUPS,
-  WAVE_REST_MS, SCALING, ENEMY_DEFS,
+  WAVE_REST_MS, SCALING, ENEMY_DEFS, WALL,
+  ARENA_SHRINK_PER_WAVE, ARENA_MIN_RADIUS, ARENA_OUTSIDE_DPS,
   waveEnemyCount, enemyTypesForWave, scaleStat,
 } from './config.js';
 
 let nextEnemyId = 1;
 let nextPickupId = 1;
 let nextProjectileId = 1;
+let nextWallId = 1;
 
 export function startGameLoop(roomManager) {
   setInterval(() => {
@@ -49,6 +51,7 @@ function tickRoom(room) {
   updateEnemies(room, dt);
   updateProjectiles(room, dt);
   updatePickups(room);
+  updateWalls(room);
   updateCombo(room);
   checkWaveClear(room);
   checkGameOver(room);
@@ -67,11 +70,11 @@ function updatePlayers(room, dt) {
       p.z += (dz / len) * speed * dt;
     }
     const dist = Math.sqrt(p.x * p.x + p.z * p.z);
-    if (dist > ARENA_RADIUS - 1) {
-      const s = (ARENA_RADIUS - 1) / dist;
+    if (dist > room.arenaRadius - 1) {
+      const s = (room.arenaRadius - 1) / dist;
       p.x *= s; p.z *= s;
     }
-    if (p.meleeCooldown > 0) p.meleeCooldown -= TICK_MS;
+    if (p.shootCooldown > 0) p.shootCooldown -= TICK_MS;
     if (p.specialCooldown > 0) p.specialCooldown -= TICK_MS;
     for (const buff in p.buffs) {
       if (p.buffs[buff] > 0) {
@@ -79,14 +82,33 @@ function updatePlayers(room, dt) {
         if (p.buffs[buff] <= 0) delete p.buffs[buff];
       }
     }
-    if (p.input.attack && p.meleeCooldown <= 0) {
-      p.meleeCooldown = PLAYER.meleeCooldown;
+    if (p.input.attack && p.shootCooldown <= 0) {
+      p.shootCooldown = PLAYER.shootCooldown;
       const aimAngle = Math.atan2(p.input.aimZ - p.z, p.input.aimX - p.x);
-      meleeAttack(room, p, aimAngle);
+      playerShoot(room, p, aimAngle);
     }
     if (p.input.special && p.specialCooldown <= 0) {
       p.specialCooldown = PLAYER.specialCooldown;
       specialAttack(room, p);
+    }
+    // Wall placement
+    if (p.input.wall && p.wallCharges > 0 && p.wallPlaceCooldown <= 0) {
+      p.wallCharges--;
+      p.wallPlaceCooldown = WALL.placeCooldown;
+      if (p.wallCharges <= 0) p.wallRechargeTimer = WALL.cooldown;
+      const aimAngle = Math.atan2(p.input.aimZ - p.z, p.input.aimX - p.x);
+      spawnWall(room, p.x + Math.cos(aimAngle) * 2.5, p.z + Math.sin(aimAngle) * 2.5, aimAngle + Math.PI / 2);
+      p.input.wall = false;
+    }
+    if (p.wallPlaceCooldown > 0) p.wallPlaceCooldown -= TICK_MS;
+    if (p.wallRechargeTimer > 0) {
+      p.wallRechargeTimer -= TICK_MS;
+      if (p.wallRechargeTimer <= 0) p.wallCharges = WALL.charges;
+    }
+    // Arena outside damage
+    const pDist = Math.sqrt(p.x * p.x + p.z * p.z);
+    if (pDist > room.arenaRadius - 1) {
+      damagePlayer(room, p, Math.ceil(ARENA_OUTSIDE_DPS * dt));
     }
     for (const [pkId, pk] of room.pickups) {
       const pdx = pk.x - p.x;
@@ -99,29 +121,11 @@ function updatePlayers(room, dt) {
   }
 }
 
-function meleeAttack(room, player, aimAngle) {
-  const baseDmg = pDamage(player);
-  for (const [, e] of room.enemies) {
-    const dx = e.x - player.x;
-    const dz = e.z - player.z;
-    const dist = Math.sqrt(dx * dx + dz * dz);
-    if (dist > PLAYER.meleeRange) continue;
-    const angle = Math.atan2(dz, dx);
-    let diff = angle - aimAngle;
-    while (diff > Math.PI) diff -= Math.PI * 2;
-    while (diff < -Math.PI) diff += Math.PI * 2;
-    if (Math.abs(diff) > PLAYER.meleeArc / 2) continue;
-    if (e.type === 'shielder') {
-      const faceAngle = Math.atan2(player.z - e.z, player.x - e.x);
-      let faceDiff = faceAngle - e.facing;
-      while (faceDiff > Math.PI) faceDiff -= Math.PI * 2;
-      while (faceDiff < -Math.PI) faceDiff += Math.PI * 2;
-      if (Math.abs(faceDiff) < Math.PI / 3) continue;
-    }
-    const crit = Math.random() < PLAYER.critChance;
-    const dmg = Math.floor(baseDmg * (crit ? PLAYER.critMultiplier : 1));
-    damageEnemy(room, e, dmg, player, crit);
-  }
+function playerShoot(room, player, aimAngle) {
+  const speed = PLAYER.bulletSpeed;
+  const vx = Math.cos(aimAngle) * speed;
+  const vz = Math.sin(aimAngle) * speed;
+  spawnProjectile(room, player.x + Math.cos(aimAngle) * 0.8, player.z + Math.sin(aimAngle) * 0.8, vx, vz, 'bullet', pDamage(player), player.id);
 }
 
 function specialAttack(room, player) {
@@ -290,9 +294,19 @@ function updateEnemies(room, dt) {
     }
     if (e.attackCooldown > 0) e.attackCooldown -= TICK_MS;
     if (e.chargeCooldown > 0) e.chargeCooldown -= TICK_MS;
+    // Push from walls
+    for (const [, w] of room.walls) {
+      const wdx = e.x - w.x; const wdz = e.z - w.z;
+      const wdist = Math.sqrt(wdx * wdx + wdz * wdz);
+      if (wdist < WALL.collisionRadius && wdist > 0) {
+        const push = (WALL.collisionRadius - wdist) / wdist;
+        e.x += wdx * push; e.z += wdz * push;
+        w.hp -= e.damage * dt * 0.5;
+      }
+    }
     const edist = Math.sqrt(e.x * e.x + e.z * e.z);
-    if (edist > ARENA_RADIUS + 5) {
-      const s = (ARENA_RADIUS + 5) / edist; e.x *= s; e.z *= s;
+    if (edist > room.arenaRadius + 5) {
+      const s = (room.arenaRadius + 5) / edist; e.x *= s; e.z *= s;
     }
   }
 }
@@ -313,20 +327,58 @@ function updateProjectiles(room, dt) {
     if (pr.age > 3000 || Math.sqrt(pr.x * pr.x + pr.z * pr.z) > ARENA_RADIUS + 5) {
       room.projectiles.delete(id); continue;
     }
-    for (const [, p] of room.players) {
-      if (!p.alive) continue;
-      const dx = p.x - pr.x; const dz = p.z - pr.z;
-      if (dx * dx + dz * dz < 1.5) {
-        damagePlayer(room, p, pr.damage);
-        room.projectiles.delete(id); break;
+    if (pr.type === 'bullet') {
+      for (const [, e] of room.enemies) {
+        const dx = e.x - pr.x; const dz = e.z - pr.z;
+        if (dx * dx + dz * dz < 1.2) {
+          const player = room.players.get(pr.owner);
+          if (player) {
+            const crit = Math.random() < PLAYER.critChance;
+            const dmg = Math.floor(pr.damage * (crit ? PLAYER.critMultiplier : 1));
+            damageEnemy(room, e, dmg, player, crit);
+          }
+          room.projectiles.delete(id); break;
+        }
+      }
+    } else {
+      // Enemy projectiles blocked by walls
+      let hitWall = false;
+      for (const [, w] of room.walls) {
+        const wdx = pr.x - w.x; const wdz = pr.z - w.z;
+        if (wdx * wdx + wdz * wdz < WALL.collisionRadius * WALL.collisionRadius) {
+          w.hp -= 10;
+          room.projectiles.delete(id);
+          hitWall = true; break;
+        }
+      }
+      if (hitWall) continue;
+      for (const [, p] of room.players) {
+        if (!p.alive) continue;
+        const dx = p.x - pr.x; const dz = p.z - pr.z;
+        if (dx * dx + dz * dz < 1.5) {
+          damagePlayer(room, p, pr.damage);
+          room.projectiles.delete(id); break;
+        }
       }
     }
   }
 }
 
-function spawnProjectile(room, x, z, vx, vz, type, damage) {
+function spawnProjectile(room, x, z, vx, vz, type, damage, owner) {
   const id = 'pr' + nextProjectileId++;
-  room.projectiles.set(id, { id, x, z, vx, vz, type, damage, age: 0 });
+  room.projectiles.set(id, { id, x, z, vx, vz, type, damage, age: 0, owner: owner || null });
+}
+
+function spawnWall(room, x, z, angle) {
+  const id = 'w' + nextWallId++;
+  room.walls.set(id, { id, x, z, angle, hp: WALL.hp, maxHp: WALL.hp, age: 0 });
+}
+
+function updateWalls(room) {
+  for (const [id, w] of room.walls) {
+    w.age += TICK_MS;
+    if (w.hp <= 0 || w.age > WALL.lifetime) room.walls.delete(id);
+  }
 }
 
 function updatePickups(room) {
@@ -361,6 +413,8 @@ function getComboTier(combo) {
 
 function spawnWave(room) {
   const wave = room.wave;
+  // Shrink arena each wave
+  room.arenaRadius = Math.max(ARENA_MIN_RADIUS, ARENA_RADIUS - (wave - 1) * ARENA_SHRINK_PER_WAVE);
   const isBossWave = wave % 5 === 0 && wave > 0;
   const types = enemyTypesForWave(wave);
   const count = waveEnemyCount(wave, room.playerCount);

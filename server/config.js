@@ -9,13 +9,12 @@ export const ROOM_CLEANUP_MS = 30000;
 export const PLAYER = {
   hp: 100,
   damage: 10,
-  speed: 8,
-  meleeRange: 2,
-  meleeArc: Math.PI / 2,
-  meleeCooldown: 300,
-  specialRange: 4,
-  specialCooldown: 3000,
-  specialKnockback: 5,
+  speed: 10,
+  shootCooldown: 150,
+  bulletSpeed: 35,
+  specialRange: 6,
+  specialCooldown: 2500,
+  specialKnockback: 6,
   critChance: 0.1,
   critMultiplier: 2,
 };
@@ -41,6 +40,19 @@ export const PICKUPS = {
 export const PICKUP_DESPAWN_MS = 8000;
 export const PICKUP_DROP_BASE = 0.15;
 export const PICKUP_DROP_COMBO_BONUS = 0.02;
+
+export const WALL = {
+  hp: 80,
+  charges: 3,
+  cooldown: 15000,
+  placeCooldown: 500,
+  collisionRadius: 2,
+  lifetime: 30000,
+};
+
+export const ARENA_SHRINK_PER_WAVE = 1.5;
+export const ARENA_MIN_RADIUS = 15;
+export const ARENA_OUTSIDE_DPS = 5;
 
 export const COMBO_DECAY_MS = 2500;
 export const COMBO_TIERS = [

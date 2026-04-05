@@ -43,6 +43,7 @@ export function sendInput(input) {
     d: [input.dx, input.dz],
     a: input.attack ? 1 : 0,
     s: input.special ? 1 : 0,
+    w: input.wall ? 1 : 0,
     aim: [input.aimX, 0, input.aimZ],
   }));
 }

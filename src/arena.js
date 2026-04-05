@@ -2,14 +2,15 @@ import * as THREE from 'https://esm.sh/three@0.162.0';
 import { scene } from './renderer.js';
 
 const ARENA_RADIUS = 40;
-let floorMesh, barrierMesh;
+let floorMesh, barrierMesh, shrinkRingMesh, shrinkRingMat;
+let currentRadius = 40;
 
 const BIOMES = {
-  stone:   { floor: 0x333333, wall: 0x555555 },
-  inferno: { floor: 0x441111, wall: 0x883322 },
-  frozen:  { floor: 0x334455, wall: 0x667788 },
-  toxic:   { floor: 0x224422, wall: 0x336633 },
-  void:    { floor: 0x111122, wall: 0x332244 },
+  stone:   { floor: 0x3a3a3a, wall: 0x666666 },
+  inferno: { floor: 0x552211, wall: 0xaa4433 },
+  frozen:  { floor: 0x3a5566, wall: 0x7799aa },
+  toxic:   { floor: 0x2a4a2a, wall: 0x448844 },
+  void:    { floor: 0x1a1a33, wall: 0x443355 },
 };
 
 let currentBiome = 'stone';
@@ -41,6 +42,14 @@ export function createArena() {
   barrierMesh = new THREE.Mesh(barrierGeo, barrierMat);
   barrierMesh.position.y = 0.5;
   scene.add(barrierMesh);
+
+  // Danger zone ring
+  const shrinkGeo = new THREE.RingGeometry(ARENA_RADIUS - 0.8, ARENA_RADIUS + 0.8, 64);
+  shrinkGeo.rotateX(-Math.PI / 2);
+  shrinkRingMat = new THREE.MeshBasicMaterial({ color: 0xff2222, transparent: true, opacity: 0.25, side: THREE.DoubleSide });
+  shrinkRingMesh = new THREE.Mesh(shrinkGeo, shrinkRingMat);
+  shrinkRingMesh.position.y = 0.08;
+  scene.add(shrinkRingMesh);
 }
 
 export function setBiome(wave) {
@@ -48,6 +57,15 @@ export function setBiome(wave) {
   const idx = Math.floor((wave - 1) / 5);
   targetBiome = biomes[Math.min(idx, biomes.length - 1)];
   if (targetBiome !== currentBiome) biomeTransition = 0;
+}
+
+export function updateArenaRadius(radius) {
+  if (Math.abs(radius - currentRadius) < 0.1) return;
+  currentRadius = radius;
+  const scale = radius / ARENA_RADIUS;
+  barrierMesh.scale.set(scale, 1, scale);
+  shrinkRingMesh.scale.set(scale, 1, scale);
+  shrinkRingMat.opacity = 0.2 + Math.sin(Date.now() / 400) * 0.15;
 }
 
 export function updateBiome(dt) {

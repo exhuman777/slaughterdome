@@ -7,8 +7,8 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { background: #111; overflow: hidden; font-family: 'Courier New', monospace; }
-  canvas { display: block; }
-  #ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+  canvas { display: block; position: relative; z-index: 0; }
+  #ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
   #ui > * { pointer-events: auto; }
   #title { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: #fff; }
   #title h1 { font-size: 64px; color: #ff4444; text-shadow: 0 0 20px #ff0000; letter-spacing: 8px; }
@@ -38,7 +38,7 @@
     <input id="name-input" type="text" placeholder="Enter name..." maxlength="12">
     <br>
     <button id="play-btn">PLAY</button>
-    <p style="color:#555; margin-top:20px; font-size:12px;">WASD move / Mouse aim / Click attack / Space special</p>
+    <p style="color:#555; margin-top:20px; font-size:12px;">WASD move / Mouse aim / LMB shoot / RMB AoE / E build wall</p>
   </div>
   <div id="hud">
     <div id="hud-wave">WAVE 1</div>
@@ -55,6 +55,7 @@
   </div>
   <div id="ping"></div>
 </div>
+<div id="flash-overlay" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:999;opacity:0;"></div>
 <script>
   // Override for custom server URL
   // window.SLAUGHTERDOME_WS = 'wss://your-server.up.railway.app';
