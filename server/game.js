@@ -139,7 +139,11 @@ function updatePlayers(room, dt) {
       p.wallPlaceCooldown = WALL.placeCooldown;
       if (p.wallCharges <= 0) p.wallRechargeTimer = WALL.cooldown;
       const aimAngle = Math.atan2(p.input.aimZ - p.z, p.input.aimX - p.x);
-      spawnWall(room, p.x + Math.cos(aimAngle) * 2.5, p.z + Math.sin(aimAngle) * 2.5, aimAngle + Math.PI / 2, p);
+      const aimDist = Math.sqrt((p.input.aimX - p.x) ** 2 + (p.input.aimZ - p.z) ** 2);
+      const placeDist = Math.min(aimDist, 8);
+      const wx = p.x + Math.cos(aimAngle) * placeDist;
+      const wz = p.z + Math.sin(aimAngle) * placeDist;
+      spawnWall(room, wx, wz, aimAngle + Math.PI / 2, p);
       p.input.wall = false;
     }
     if (p.wallPlaceCooldown > 0) p.wallPlaceCooldown -= TICK_MS;

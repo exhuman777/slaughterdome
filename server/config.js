@@ -1,7 +1,8 @@
 export const TICK_RATE = 20;
 export const TICK_MS = 1000 / TICK_RATE;
 export const ARENA_RADIUS = 40;
-export const MAX_PLAYERS = 4;
+export const MAX_PLAYERS = 2;
+export const MAX_ROOMS = 3;
 export const GRACE_PERIOD_MS = 5000;
 export const WAVE_REST_MS = 5000;
 export const ROOM_CLEANUP_MS = 30000;

@@ -1,4 +1,4 @@
-import { MAX_PLAYERS, ROOM_CLEANUP_MS, PLAYER, ARENA_RADIUS, WALL, OVERHEAT } from './config.js';
+import { MAX_PLAYERS, MAX_ROOMS, ROOM_CLEANUP_MS, PLAYER, ARENA_RADIUS, WALL, OVERHEAT } from './config.js';
 
 let nextRoomId = 1;
 let nextPlayerId = 1;
@@ -124,6 +124,7 @@ export class RoomManager {
     for (const [, room] of this.rooms) {
       if (!room.isFull && room.state !== 'destroyed' && room.state !== 'gameover') return room;
     }
+    if (this.activeRooms.length >= MAX_ROOMS) return null;
     const room = new Room();
     this.rooms.set(room.id, room);
     return room;

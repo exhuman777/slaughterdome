@@ -30,6 +30,10 @@ wss.on('connection', (ws) => {
 
     if (msg.t === 'join' && !player) {
       room = roomManager.findOrCreate();
+      if (!room) {
+        ws.send(JSON.stringify({ t: 'error', msg: 'Server full' }));
+        return;
+      }
       player = room.addPlayer(ws, msg.name);
       ws.send(JSON.stringify({ t: 'joined', id: player.id, roomId: room.id }));
     }
