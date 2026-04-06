@@ -5,11 +5,6 @@ export let scene, camera, renderer, clock;
 const CAMERA_HEIGHT = 35;
 const CAMERA_ANGLE = 55 * (Math.PI / 180);
 
-let shakeIntensity = 0;
-let flashEl = null;
-let hitstopRemaining = 0;
-let camKickX = 0, camKickZ = 0;
-
 export function initRenderer() {
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x1a1a2e);
@@ -47,7 +42,6 @@ export function initRenderer() {
   scene.add(rim);
 
   clock = new THREE.Clock();
-  flashEl = document.getElementById('flash-overlay');
 
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -56,42 +50,17 @@ export function initRenderer() {
   });
 }
 
-export function triggerShake(intensity) {
-  shakeIntensity = Math.max(shakeIntensity, intensity);
-}
-
-export function flashScreen(color, duration) {
-  if (!flashEl) return;
-  flashEl.style.background = color || '#ffffff';
-  flashEl.style.opacity = '0.5';
-  flashEl.style.transition = 'none';
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      flashEl.style.transition = `opacity ${duration || 0.15}s ease-out`;
-      flashEl.style.opacity = '0';
-    });
-  });
-}
-
-export function startHitstop(ms) {
-  hitstopRemaining = Math.max(hitstopRemaining, ms || 60);
-}
-
-export function tickHitstop(dtMs) {
-  if (hitstopRemaining > 0) { hitstopRemaining -= dtMs; return true; }
-  return false;
-}
-
-export function triggerCamKick(aimAngle) {
-  camKickX = -Math.cos(aimAngle) * 0.4;
-  camKickZ = -Math.sin(aimAngle) * 0.4;
-}
+// All stutter effects disabled - no-ops for smooth gameplay
+export function triggerShake() {}
+export function flashScreen() {}
+export function startHitstop() {}
+export function tickHitstop() { return false; }
+export function triggerCamKick() {}
 
 let lastCamDt = 0.016;
 export function setCamDt(dt) { lastCamDt = dt; }
 
 export function updateCamera(targetX, targetZ, aimX, aimZ) {
-  // Look-ahead: blend target 30% toward aim, max 5 units offset
   if (aimX !== undefined && aimZ !== undefined) {
     const lookX = (aimX - targetX) * 0.3;
     const lookZ = (aimZ - targetZ) * 0.3;
@@ -106,22 +75,6 @@ export function updateCamera(targetX, targetZ, aimX, aimZ) {
   camera.position.x += (targetX - camera.position.x) * t;
   camera.position.z += (tz - camera.position.z) * t;
   camera.lookAt(targetX, 0, targetZ);
-
-  camera.position.x += camKickX;
-  camera.position.z += camKickZ;
-  camKickX *= 0.5;
-  camKickZ *= 0.5;
-  if (Math.abs(camKickX) < 0.01) camKickX = 0;
-  if (Math.abs(camKickZ) < 0.01) camKickZ = 0;
-
-  if (shakeIntensity > 0.1) {
-    camera.position.x += (Math.random() - 0.5) * shakeIntensity;
-    camera.position.y += (Math.random() - 0.5) * shakeIntensity * 0.3;
-    camera.position.z += (Math.random() - 0.5) * shakeIntensity;
-    shakeIntensity *= 0.82;
-  } else {
-    shakeIntensity = 0;
-  }
 }
 
 export function render() {

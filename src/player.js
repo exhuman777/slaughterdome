@@ -34,12 +34,8 @@ export function createPlayerMesh(id, index) {
   ring.position.y = 0.05;
   group.add(ring);
 
-  const glow = new THREE.PointLight(color, 0.6, 8);
-  glow.position.y = 1.5;
-  group.add(glow);
-
   scene.add(group);
-  playerMeshes.set(id, { group, body, mat, ring, ringMat, glow, bobTime: 0, color });
+  playerMeshes.set(id, { group, body, mat, ring, ringMat, bobTime: 0, color });
   return group;
 }
 
@@ -48,7 +44,6 @@ export function markLocalPlayer(id) {
   const pm = playerMeshes.get(id);
   if (pm) {
     pm.ringMat.opacity = 0.7;
-    pm.glow.intensity = 1.2;
   }
 }
 

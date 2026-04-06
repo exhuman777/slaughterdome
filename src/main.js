@@ -1,9 +1,9 @@
-import { initRenderer, render, clock, updateCamera, setCamDt, triggerShake, startHitstop, tickHitstop, triggerCamKick } from './renderer.js';
+import { initRenderer, render, clock, updateCamera, setCamDt } from './renderer.js';
 import { createArena, setBiome, updateBiome, updateArenaRadius } from './arena.js';
 import { createPlayerMesh, updatePlayerMesh, setPlayerRotation, setPlayerDashing, removePlayerMesh, markLocalPlayer } from './player.js';
 import { createEnemyMesh, updateEnemyMesh, flashEnemy, removeEnemyMesh, removeAllEnemies } from './enemy.js';
 import { updatePickups as updatePickupMeshes, syncPickups } from './pickups.js';
-import { updateParticles, spawnKillParticles, spawnSparks, spawnBloodDrops, spawnNeonPop, spawnDustPuff, spawnSpeedTrail } from './particles.js';
+import { updateParticles, spawnKillParticles, spawnSparks, spawnBloodDrops, spawnDustPuff, spawnSpeedTrail } from './particles.js';
 import * as THREE from 'https://esm.sh/three@0.162.0';
 import { scene } from './renderer.js';
 import { showGunShot, showSpecialAttack, showDamageNumber, showExplosion, showHitImpact, updateCombatVisuals } from './combat.js';
@@ -100,19 +100,6 @@ function gameLoop() {
   const dt = clock.getDelta();
   setCamDt(dt);
 
-  if (tickHitstop(dtMs)) {
-    updateCombatVisuals(dt * 0.1);
-    updateParticles(dt * 0.1);
-    const myId = getMyId();
-    const state = getState();
-    if (state && myId) {
-      const me = state.players.find(p => p.id === myId);
-      if (me) updateCamera(hasPrediction ? predictedX : me.pos[0], hasPrediction ? predictedZ : me.pos[2], lastInput.aimX, lastInput.aimZ);
-    }
-    render();
-    return;
-  }
-
   if (gameActive) {
     const input = isMobile() ? getMobileInput() : getInput();
     lastInput = input;
@@ -204,13 +191,11 @@ function gameLoop() {
             const angle = Math.atan2(input.aimZ - pz, input.aimX - px);
             showGunShot(px, pz, angle, weaponType);
             playShot(weaponType);
-            triggerCamKick(angle);
           }
         }
         if (input.special && now - lastSpecialTime > 3000) {
           lastSpecialTime = now;
           showSpecialAttack(px, pz);
-          spawnNeonPop(px, pz, 0xffaa00, 5);
         }
 
         // Wall placement preview ghost
@@ -322,23 +307,18 @@ function processState(state, dt) {
   // Sync projectiles
   const serverProjIds = new Set((state.projectiles || []).map(p => p.id));
   for (const [id, data] of knownProjectiles) {
-    if (!serverProjIds.has(id)) { scene.remove(data.mesh); if (data.glow) scene.remove(data.glow); knownProjectiles.delete(id); }
+    if (!serverProjIds.has(id)) { scene.remove(data.mesh); knownProjectiles.delete(id); }
   }
   for (const pr of (state.projectiles || [])) {
     if (!knownProjectiles.has(pr.id)) {
       const isBullet = pr.type === 'bullet';
-      const mesh = new THREE.Mesh(isBullet ? bulletGeo : spitGeo, (isBullet ? bulletMat : spitMat).clone());
+      const mesh = new THREE.Mesh(isBullet ? bulletGeo : spitGeo, isBullet ? bulletMat : spitMat);
       mesh.position.set(pr.pos[0], 1.2, pr.pos[2]);
       scene.add(mesh);
-      // Add glow light to bullets
-      const glow = new THREE.PointLight(isBullet ? 0xffdd44 : 0x33ff33, 0.5, 3);
-      glow.position.copy(mesh.position);
-      scene.add(glow);
-      knownProjectiles.set(pr.id, { mesh, glow });
+      knownProjectiles.set(pr.id, { mesh });
     } else {
       const data = knownProjectiles.get(pr.id);
       data.mesh.position.set(pr.pos[0], 1.2, pr.pos[2]);
-      if (data.glow) data.glow.position.copy(data.mesh.position);
     }
   }
 
@@ -399,7 +379,6 @@ function handleEvent(ev) {
   switch (ev.t) {
     case 'kill':
       spawnKillParticles(ev.pos[0], ev.pos[2], 0xff4444);
-      spawnSparks(ev.pos[0], ev.pos[2], 0xffaa00, 15);
       playKill();
       break;
     case 'hit': {
@@ -407,11 +386,6 @@ function handleEvent(ev) {
       if (isMe) {
         const me = getState()?.players?.find(p => p.id === getMyId());
         if (me) spawnBloodDrops(me.pos[0], me.pos[2]);
-        triggerShake(1);
-      }
-      if (ev.crit) {
-        triggerShake(3);
-        startHitstop(40);
       }
       if (ev.pos) {
         showDamageNumber(ev.pos[0], ev.pos[2], ev.dmg, ev.crit);
@@ -427,31 +401,20 @@ function handleEvent(ev) {
     case 'wave': {
       hideUpgradeShop();
       playWaveStart();
-      const wMe = getState()?.players?.find(p => p.id === getMyId());
-      if (wMe) spawnNeonPop(wMe.pos[0], wMe.pos[2], 0x4488ff, 6);
       break;
     }
     case 'boss': {
       playBossSpawn();
-      const bMe = getState()?.players?.find(p => p.id === getMyId());
-      if (bMe) spawnNeonPop(bMe.pos[0], bMe.pos[2], 0xffcc00, 8);
-      triggerShake(3);
       break;
     }
     case 'death':
       if (ev.pid === getMyId()) {
         playDeath();
-        const dMe = getState()?.players?.find(p => p.id === getMyId());
-        if (dMe) { spawnNeonPop(dMe.pos[0], dMe.pos[2], 0xff0000, 6); spawnBloodDrops(dMe.pos[0], dMe.pos[2]); }
-        triggerShake(4);
       }
       break;
     case 'explosion':
       showExplosion(ev.pos[0], ev.pos[2], ev.radius);
       playExplosion();
-      spawnNeonPop(ev.pos[0], ev.pos[2], 0xff6600, ev.radius * 2);
-      triggerShake(4);
-      startHitstop(60);
       break;
     case 'gameover':
       gameActive = false;
