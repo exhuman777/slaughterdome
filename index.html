@@ -4,56 +4,174 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>SLAUGHTERDOME</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: #111; overflow: hidden; font-family: 'Courier New', monospace; }
+  body { background: #0d0b0a; overflow: hidden; font-family: 'JetBrains Mono', 'Courier New', monospace; }
   canvas { display: block; position: relative; z-index: 0; }
   #ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
   #ui > * { pointer-events: auto; }
-  #title { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: #fff; }
-  #title h1 { font-size: 64px; color: #ff4444; text-shadow: 0 0 20px #ff0000; letter-spacing: 8px; }
-  #title input { background: rgba(255,255,255,0.1); border: 1px solid #555; color: #fff; padding: 8px 16px; font-size: 18px; font-family: inherit; text-align: center; margin: 20px 0; outline: none; }
-  #title input::placeholder { color: #666; }
-  #title button { background: #ff4444; color: #fff; border: none; padding: 12px 48px; font-size: 24px; font-family: inherit; cursor: pointer; letter-spacing: 4px; }
-  #title button:hover { background: #ff6666; }
+
+  /* Title / Landing */
+  #title {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(13,11,10,0.92);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: #c4a882; overflow-y: auto;
+  }
+  #title-inner { max-width: 680px; width: 90%; padding: 40px 0; }
+  #title h1 {
+    font-size: 56px; font-weight: 800; color: #ff4444;
+    text-shadow: 0 0 30px rgba(255,68,68,0.4);
+    letter-spacing: 10px; text-align: center; margin-bottom: 4px;
+  }
+  #title .tagline {
+    text-align: center; color: #e6993a; font-size: 13px;
+    letter-spacing: 6px; text-transform: uppercase; margin-bottom: 24px;
+  }
+  #title .desc {
+    text-align: center; color: #888; font-size: 12px; line-height: 1.6;
+    margin-bottom: 28px; padding: 0 20px;
+  }
+
+  .feature-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    margin-bottom: 28px;
+  }
+  .feature-box {
+    border: 1px solid #333; background: rgba(230,153,58,0.04);
+    padding: 14px 16px; text-align: center;
+  }
+  .feature-box .f-val { font-size: 22px; font-weight: 800; color: #e6993a; }
+  .feature-box .f-label { font-size: 10px; color: #777; letter-spacing: 2px; text-transform: uppercase; margin-top: 4px; }
+
+  .section-label {
+    font-size: 11px; color: #e6993a; letter-spacing: 4px;
+    text-transform: uppercase; margin-bottom: 10px;
+    border-bottom: 1px solid #222; padding-bottom: 6px;
+  }
+
+  .controls-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px;
+    margin-bottom: 28px;
+  }
+  .ctrl-row { display: flex; align-items: center; gap: 10px; padding: 4px 0; }
+  .ctrl-key {
+    background: #1a1816; border: 1px solid #444; color: #e6993a;
+    padding: 3px 8px; font-size: 11px; font-weight: 700;
+    min-width: 50px; text-align: center; flex-shrink: 0;
+  }
+  .ctrl-desc { font-size: 11px; color: #888; }
+
+  .weapons-row {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+    margin-bottom: 28px;
+  }
+  .wep-box {
+    border: 1px solid #333; padding: 10px 8px; text-align: center;
+  }
+  .wep-name { font-size: 12px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+  .wep-stat { font-size: 10px; color: #666; line-height: 1.5; }
+
+  .play-section { text-align: center; margin-top: 8px; }
+  #title input {
+    background: rgba(255,255,255,0.05); border: 1px solid #444; color: #e6993a;
+    padding: 10px 20px; font-size: 16px; font-family: inherit;
+    text-align: center; margin-bottom: 16px; outline: none; width: 260px;
+    letter-spacing: 2px;
+  }
+  #title input::placeholder { color: #555; }
+  #title input:focus { border-color: #e6993a; }
+  #play-btn {
+    background: #ff4444; color: #fff; border: none;
+    padding: 14px 60px; font-size: 22px; font-family: inherit;
+    cursor: pointer; letter-spacing: 6px; font-weight: 800;
+    transition: background 0.15s;
+  }
+  #play-btn:hover { background: #ff6666; }
+  .footer-note {
+    text-align: center; color: #333; font-size: 10px;
+    margin-top: 20px; letter-spacing: 1px;
+  }
+
+  /* HUD */
   #hud { position: absolute; top: 0; left: 0; width: 100%; padding: 10px 20px; display: none; color: #fff; font-size: 14px; }
-  #hud-wave { float: left; font-size: 18px; }
-  #hud-score { float: right; font-size: 18px; }
+  #hud-wave { float: left; font-size: 18px; font-weight: 700; }
+  #hud-score { float: right; font-size: 18px; font-weight: 700; }
   #hud-hp { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); }
   #hp-bar { width: 200px; height: 8px; background: #333; border-radius: 4px; overflow: hidden; }
   #hp-fill { height: 100%; background: #44ff44; transition: width 0.2s; }
-  #combo { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 32px; color: #ffcc00; text-shadow: 0 0 10px #ffcc00; display: none; pointer-events: none; }
+  #combo { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 32px; color: #ffcc00; text-shadow: 0 0 10px #ffcc00; display: none; pointer-events: none; font-weight: 800; }
   #gameover { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: #fff; display: none; }
-  #gameover h2 { font-size: 48px; color: #ff4444; margin-bottom: 20px; }
+  #gameover h2 { font-size: 48px; color: #ff4444; margin-bottom: 20px; font-weight: 800; }
   #gameover .stats { font-size: 18px; margin: 10px 0; }
-  #gameover button { background: #ff4444; color: #fff; border: none; padding: 12px 48px; font-size: 20px; font-family: inherit; cursor: pointer; margin-top: 20px; letter-spacing: 4px; }
+  #gameover button { background: #ff4444; color: #fff; border: none; padding: 12px 48px; font-size: 20px; font-family: inherit; cursor: pointer; margin-top: 20px; letter-spacing: 4px; font-weight: 700; }
   #ping { position: absolute; top: 10px; right: 10px; color: #666; font-size: 12px; display: none; }
   #upgrade-shop { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); display:flex; gap:16px; z-index:50; }
-  .upgrade-card { background:#1a1a1a; border:2px solid #888; border-radius:4px; padding:16px 20px; width:180px; cursor:pointer; text-align:center; font-family:'Courier New',monospace; transition:transform 0.1s,border-color 0.1s; }
-  .upgrade-card:hover { transform:scale(1.05); border-color:#fff; }
+  .upgrade-card { background:#1a1a1a; border:2px solid #888; border-radius:4px; padding:16px 20px; width:180px; cursor:pointer; text-align:center; font-family:inherit; transition:transform 0.1s,border-color 0.1s; }
+  .upgrade-card:hover { transform:scale(1.05); border-color:#e6993a; }
   .upgrade-tier { font-size:10px; letter-spacing:2px; margin-bottom:6px; }
-  .upgrade-name { color:#fff; font-size:16px; font-weight:bold; margin-bottom:8px; }
+  .upgrade-name { color:#fff; font-size:16px; font-weight:700; margin-bottom:8px; }
   .upgrade-desc { color:#aaa; font-size:12px; margin-bottom:10px; }
   .upgrade-key { color:#555; font-size:11px; }
-  #upgrade-strip { position:absolute; bottom:38px; left:50%; transform:translateX(-50%); color:#e6993a; font-size:11px; font-family:'Courier New',monospace; letter-spacing:1px; text-align:center; }
+  #upgrade-strip { position:absolute; bottom:38px; left:50%; transform:translateX(-50%); color:#e6993a; font-size:11px; letter-spacing:1px; text-align:center; }
   #hud-weapon { position:absolute; bottom:80px; left:50%; transform:translateX(-50%); color:#fff; font-size:14px; text-align:center; letter-spacing:2px; }
   #ammo-bar { width:200px; height:4px; background:#222; border-radius:2px; margin-top:4px; }
   #ammo-fill { height:100%; background:#ffcc44; border-radius:2px; transition:width 0.1s; }
   #ammo-text { font-size:11px; color:#aaa; margin-top:2px; }
   #hud-controls { position:absolute; bottom:6px; left:50%; transform:translateX(-50%); color:#444; font-size:10px; letter-spacing:1px; }
-  #hud-countdown { position:absolute; top:40%; left:50%; transform:translate(-50%,-50%); font-size:48px; color:#ff4444; text-shadow:0 0 15px #ff0000; display:none; letter-spacing:4px; }
+  #hud-countdown { position:absolute; top:40%; left:50%; transform:translate(-50%,-50%); font-size:48px; color:#ff4444; text-shadow:0 0 15px #ff0000; display:none; letter-spacing:4px; font-weight:800; }
 </style>
 </head>
 <body>
 <div id="ui">
   <div id="title">
-    <h1>SLAUGHTERDOME</h1>
-    <p style="color:#888; margin-bottom: 20px;">WAVE SURVIVAL ARENA</p>
-    <input id="name-input" type="text" placeholder="Enter name..." maxlength="12">
-    <br>
-    <button id="play-btn">PLAY</button>
-    <p style="color:#555; margin-top:20px; font-size:12px;">WASD move / Mouse aim / LMB shoot / RMB AoE / E build wall / SHIFT dash</p>
+    <div id="title-inner">
+      <h1>SLAUGHTERDOME</h1>
+      <div class="tagline">Wave Survival Arena</div>
+      <div class="desc">
+        Survive endless waves of enemies in a shrinking arena. Kill to build combos,
+        collect upgrades between waves, and push for the highest score.
+        Solo or multiplayer. No mercy.
+      </div>
+
+      <div class="feature-grid">
+        <div class="feature-box"><div class="f-val">4</div><div class="f-label">Weapons</div></div>
+        <div class="feature-box"><div class="f-val">17</div><div class="f-label">Upgrades</div></div>
+        <div class="feature-box"><div class="f-val">8</div><div class="f-label">Enemy Types</div></div>
+        <div class="feature-box"><div class="f-val">INF</div><div class="f-label">Waves</div></div>
+      </div>
+
+      <div class="section-label">Controls</div>
+      <div class="controls-grid">
+        <div class="ctrl-row"><span class="ctrl-key">WASD</span><span class="ctrl-desc">Move</span></div>
+        <div class="ctrl-row"><span class="ctrl-key">MOUSE</span><span class="ctrl-desc">Aim</span></div>
+        <div class="ctrl-row"><span class="ctrl-key">LMB</span><span class="ctrl-desc">Shoot</span></div>
+        <div class="ctrl-row"><span class="ctrl-key">RMB</span><span class="ctrl-desc">AoE blast</span></div>
+        <div class="ctrl-row"><span class="ctrl-key">SHIFT</span><span class="ctrl-desc">Dash (i-frames)</span></div>
+        <div class="ctrl-row"><span class="ctrl-key">E</span><span class="ctrl-desc">Place wall</span></div>
+        <div class="ctrl-row"><span class="ctrl-key">R</span><span class="ctrl-desc">Reload</span></div>
+        <div class="ctrl-row"><span class="ctrl-key">1 2 3</span><span class="ctrl-desc">Pick upgrade</span></div>
+      </div>
+
+      <div class="section-label">Weapons</div>
+      <div class="weapons-row">
+        <div class="wep-box"><div class="wep-name">PISTOL</div><div class="wep-stat">Balanced<br>12 rounds</div></div>
+        <div class="wep-box"><div class="wep-name">SHOTGUN</div><div class="wep-stat">5-bullet spread<br>6 rounds</div></div>
+        <div class="wep-box"><div class="wep-name">RAILGUN</div><div class="wep-stat">Piercing beam<br>5 rounds</div></div>
+        <div class="wep-box"><div class="wep-name">FLAME</div><div class="wep-stat">Short range spray<br>40 fuel</div></div>
+      </div>
+
+      <div class="play-section">
+        <input id="name-input" type="text" placeholder="Enter name..." maxlength="12">
+        <br>
+        <button id="play-btn">ENTER THE DOME</button>
+      </div>
+      <div class="footer-note">Built by exHuman // AI Game Jam 2026</div>
+    </div>
   </div>
+
   <div id="hud">
     <div id="hud-wave">WAVE 1</div>
     <div id="hud-score">SCORE: 0</div>
