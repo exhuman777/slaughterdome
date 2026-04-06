@@ -50,6 +50,13 @@ export const WALL = {
   lifetime: 30000,
 };
 
+export const DASH = {
+  speed: 30,
+  duration: 250,
+  cooldown: 2000,
+  iframes: 150,
+};
+
 export const ARENA_SHRINK_PER_WAVE = 1.5;
 export const ARENA_MIN_RADIUS = 15;
 export const ARENA_OUTSIDE_DPS = 5;
