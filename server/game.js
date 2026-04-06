@@ -4,7 +4,7 @@ import {
   WAVE_REST_MS, SCALING, ENEMY_DEFS, WALL, DASH,
   ARENA_SHRINK_PER_WAVE, ARENA_MIN_RADIUS, ARENA_OUTSIDE_DPS,
   waveEnemyCount, enemyTypesForWave, scaleStat,
-  UPGRADE_DEFS, UPGRADE_TIER_WEIGHTS, WEAPONS,
+  UPGRADE_DEFS, UPGRADE_TIER_WEIGHTS, WEAPONS, OVERHEAT,
 } from './config.js';
 
 let nextEnemyId = 1;
@@ -114,16 +114,18 @@ function updatePlayers(room, dt) {
         if (p.buffs[buff] <= 0) delete p.buffs[buff];
       }
     }
-    // Reload timer
-    if (p.reloadTimer > 0) {
-      p.reloadTimer -= TICK_MS;
-      if (p.reloadTimer <= 0) {
-        const wep = WEAPONS[p.weapon || 'pistol'];
-        p.ammo = wep.magSize;
-        p.reloadTimer = 0;
+    // Overheat system
+    if (p.overheated) {
+      p.overheatCooldown -= TICK_MS;
+      if (p.overheatCooldown <= 0) {
+        p.overheated = false;
+        p.heatTimer = 0;
+        p.overheatCooldown = 0;
       }
+    } else if (!p.input.attack) {
+      p.heatTimer = Math.max(0, p.heatTimer - TICK_MS * 0.5);
     }
-    if (p.input.attack && p.shootCooldown <= 0 && p.reloadTimer <= 0 && p.ammo > 0) {
+    if (p.input.attack && p.shootCooldown <= 0) {
       const aimAngle = Math.atan2(p.input.aimZ - p.z, p.input.aimX - p.x);
       playerShoot(room, p, aimAngle);
     }
@@ -172,11 +174,15 @@ function updatePlayers(room, dt) {
 
 function playerShoot(room, player, aimAngle) {
   const wep = WEAPONS[player.weapon || 'pistol'];
-  const cooldown = Math.max(50, wep.cooldown * Math.pow(0.85, player.upgrades.fire_rate || 0));
+  let cooldown = Math.max(50, wep.cooldown * Math.pow(0.85, player.upgrades.fire_rate || 0));
+  if (player.overheated) cooldown *= OVERHEAT.slowMult;
   player.shootCooldown = cooldown;
-  player.ammo--;
-  if (player.ammo <= 0) {
-    player.reloadTimer = wep.reloadMs;
+  if (!player.overheated) {
+    player.heatTimer += cooldown;
+    if (player.heatTimer >= OVERHEAT.fastMs) {
+      player.overheated = true;
+      player.overheatCooldown = OVERHEAT.slowMs;
+    }
   }
   const baseDmg = pDamage(player);
   const dmg = Math.floor(baseDmg * wep.damageMult);
@@ -617,8 +623,9 @@ export function applyUpgrade(player, upgradeKey) {
   if (!def) return;
   if (def.category === 'weapon_swap') {
     player.weapon = upgradeKey;
-    player.ammo = WEAPONS[upgradeKey].magSize;
-    player.reloadTimer = 0;
+    player.heatTimer = 0;
+    player.overheated = false;
+    player.overheatCooldown = 0;
   } else {
     player.upgrades[upgradeKey] = (player.upgrades[upgradeKey] || 0) + 1;
   }

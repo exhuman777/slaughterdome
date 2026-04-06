@@ -106,11 +106,17 @@ export const UPGRADE_TIER_WEIGHTS = {
   epic:   { base: 0.07, perComboTier: 0.02 },
 };
 
+export const OVERHEAT = {
+  fastMs: 3000,
+  slowMs: 5000,
+  slowMult: 3,
+};
+
 export const WEAPONS = {
-  pistol:       { bullets: 1, spread: 0,   cooldown: 150, damageMult: 1.0, speed: 35, pierce: 0, range: 3000, magSize: 12, reloadMs: 1500 },
-  shotgun:      { bullets: 5, spread: 0.3, cooldown: 400, damageMult: 0.7, speed: 25, pierce: 0, range: 1500, magSize: 6,  reloadMs: 2000 },
-  railgun:      { bullets: 1, spread: 0,   cooldown: 400, damageMult: 3.0, speed: 50, pierce: 999, range: 3000, magSize: 5, reloadMs: 2000 },
-  flamethrower: { bullets: 3, spread: 0.4, cooldown: 80,  damageMult: 0.3, speed: 15, pierce: 0, range: 500,  magSize: 40, reloadMs: 2000 },
+  pistol:       { bullets: 1, spread: 0,   cooldown: 150, damageMult: 1.0, speed: 35, pierce: 0, range: 3000 },
+  shotgun:      { bullets: 5, spread: 0.3, cooldown: 400, damageMult: 0.7, speed: 25, pierce: 0, range: 1500 },
+  railgun:      { bullets: 1, spread: 0,   cooldown: 400, damageMult: 3.0, speed: 50, pierce: 999, range: 3000 },
+  flamethrower: { bullets: 3, spread: 0.4, cooldown: 80,  damageMult: 0.3, speed: 15, pierce: 0, range: 500 },
 };
 
 export const PLAYER_COUNT_SCALING = [0, 1, 1.5, 2, 2.5];

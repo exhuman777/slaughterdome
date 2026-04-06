@@ -341,8 +341,7 @@ function processState(state, dt) {
     const dashPct = me.dashCooldown > 0 ? Math.max(0, 1 - me.dashCooldown / 2000) * 100 : 100;
     const dashFill = document.getElementById('dash-fill');
     if (dashFill) dashFill.style.width = dashPct + '%';
-    const magSizes = { pistol: 12, shotgun: 6, railgun: 5, flamethrower: 40 };
-    updateWeaponHUD(me.weapon, me.ammo, magSizes[me.weapon || 'pistol'] || 12, me.reloading);
+    updateWeaponHUD(me.weapon, me.overheated, me.heatPct || 0);
   }
   updateCountdown(state.phase, state.waveTimer);
 

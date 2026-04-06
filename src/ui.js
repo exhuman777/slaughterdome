@@ -85,15 +85,15 @@ export function updateUpgradeDisplay(upgrades) {
   upgradeStrip.textContent = parts.join('  ');
 }
 
-export function updateWeaponHUD(weapon, ammo, maxAmmo, reloading) {
+export function updateWeaponHUD(weapon, overheated, heatPct) {
   if (!weaponEl) return;
   weaponEl.style.display = 'block';
-  weaponName.textContent = (weapon || 'PISTOL').toUpperCase() + (reloading ? ' [RELOADING]' : '');
-  weaponName.style.color = reloading ? '#ff4444' : '#fff';
-  const pct = maxAmmo > 0 ? (ammo / maxAmmo) * 100 : 100;
+  weaponName.textContent = (weapon || 'PISTOL').toUpperCase() + (overheated ? ' [SLOW]' : '');
+  weaponName.style.color = overheated ? '#ff4444' : '#fff';
+  const pct = Math.max(0, Math.min(100, heatPct * 100));
   ammoFill.style.width = pct + '%';
-  ammoFill.style.background = pct > 30 ? '#ffcc44' : '#ff4444';
-  ammoText.textContent = ammo + '/' + maxAmmo;
+  ammoFill.style.background = overheated ? '#ff4444' : (pct > 70 ? '#ffaa00' : '#ffcc44');
+  ammoText.textContent = overheated ? 'COOLING' : (pct > 0 ? 'HEAT' : 'READY');
 }
 
 export function showControlsHint() {
