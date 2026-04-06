@@ -38,6 +38,7 @@ export class Room {
       input: { dx: 0, dz: 0, attack: false, special: false, aimX: 0, aimZ: 0, wall: false },
       shootCooldown: 0, specialCooldown: 0,
       wallCharges: WALL.charges, wallPlaceCooldown: 0, wallRechargeTimer: 0,
+      dashTimer: 0, dashCooldown: 0, dashDirX: 0, dashDirZ: 0, dashIframes: 0,
     };
     this.players.set(id, player);
     if (this.cleanupTimer) { clearTimeout(this.cleanupTimer); this.cleanupTimer = null; }
@@ -75,6 +76,8 @@ export class Room {
         pos: [Math.round(p.x * 100) / 100, 0, Math.round(p.z * 100) / 100],
         hp: p.hp, maxHp: p.maxHp, alive: p.alive,
         buffs: Object.keys(p.buffs).filter(b => p.buffs[b] > 0),
+        dashing: p.dashTimer > 0,
+        dashCooldown: p.dashCooldown,
       });
     }
     const enemies = [];
