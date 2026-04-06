@@ -3,7 +3,7 @@ export const TICK_MS = 1000 / TICK_RATE;
 export const ARENA_RADIUS = 40;
 export const MAX_PLAYERS = 4;
 export const GRACE_PERIOD_MS = 5000;
-export const WAVE_REST_MS = 5000;
+export const WAVE_REST_MS = 10000;
 export const ROOM_CLEANUP_MS = 30000;
 
 export const PLAYER = {
@@ -78,6 +78,39 @@ export const SCALING = {
   damagePerWave: 0.05,
   bossHpBase: 200,
   bossHpPerBoss: 50,
+};
+
+export const UPGRADE_DEFS = {
+  fire_rate:     { name: 'RAPID FIRE',    desc: '-15% shoot cooldown',         tier: 'common',  category: 'weapon' },
+  bullet_size:   { name: 'BIG ROUNDS',    desc: '+30% bullet hit radius',      tier: 'common',  category: 'weapon' },
+  pierce:        { name: 'PIERCE',        desc: 'Bullets pass through +1',     tier: 'rare',    category: 'weapon' },
+  crit_chance:   { name: 'PRECISION',     desc: '+5% crit chance',             tier: 'common',  category: 'weapon' },
+  crit_damage:   { name: 'DEVASTATION',   desc: '+0.5x crit multiplier',      tier: 'rare',    category: 'weapon' },
+  move_speed:    { name: 'SWIFT',         desc: '+1 movement speed',           tier: 'common',  category: 'movement' },
+  dash_cooldown: { name: 'QUICK DASH',    desc: '-300ms dash cooldown',        tier: 'rare',    category: 'movement' },
+  dash_distance: { name: 'LONG DASH',     desc: '+20% dash speed',             tier: 'common',  category: 'movement' },
+  max_hp:        { name: 'VITALITY',      desc: '+20 max HP',                  tier: 'common',  category: 'defense' },
+  wall_hp:       { name: 'FORTIFY',       desc: '+30 wall HP',                 tier: 'common',  category: 'defense' },
+  thorns:        { name: 'THORNS',        desc: '5 contact dmg to enemies',    tier: 'rare',    category: 'defense' },
+  lifesteal:     { name: 'VAMPIRISM',     desc: 'Heal 3% of damage dealt',     tier: 'epic',    category: 'passive' },
+  magnet:        { name: 'MAGNET',        desc: '+3 pickup attract range',     tier: 'common',  category: 'passive' },
+  combo_decay:   { name: 'MOMENTUM',      desc: '+500ms combo decay time',     tier: 'rare',    category: 'passive' },
+  shotgun:       { name: 'SHOTGUN',       desc: '5-bullet spread, slower',     tier: 'epic',    category: 'weapon_swap' },
+  railgun:       { name: 'RAILGUN',       desc: 'Piercing beam, slow fire',    tier: 'epic',    category: 'weapon_swap' },
+  flamethrower:  { name: 'FLAMETHROWER',  desc: 'Short range spray, fast',     tier: 'epic',    category: 'weapon_swap' },
+};
+
+export const UPGRADE_TIER_WEIGHTS = {
+  common: { base: 0.65, perComboTier: -0.05 },
+  rare:   { base: 0.28, perComboTier: 0.03 },
+  epic:   { base: 0.07, perComboTier: 0.02 },
+};
+
+export const WEAPONS = {
+  pistol:       { bullets: 1, spread: 0,   cooldown: 150, damageMult: 1.0, speed: 35, pierce: 0, range: 3000 },
+  shotgun:      { bullets: 5, spread: 0.3, cooldown: 400, damageMult: 0.7, speed: 25, pierce: 0, range: 1500 },
+  railgun:      { bullets: 1, spread: 0,   cooldown: 800, damageMult: 3.0, speed: 50, pierce: 999, range: 3000 },
+  flamethrower: { bullets: 3, spread: 0.4, cooldown: 80,  damageMult: 0.3, speed: 15, pierce: 0, range: 500 },
 };
 
 export const PLAYER_COUNT_SCALING = [0, 1, 1.5, 2, 2.5];
