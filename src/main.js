@@ -7,7 +7,7 @@ import { updateParticles, spawnKillParticles, spawnSparks, spawnBloodDrops, spaw
 import * as THREE from 'https://esm.sh/three@0.162.0';
 import { scene } from './renderer.js';
 import { showGunShot, showSpecialAttack, showDamageNumber, showExplosion, showHitImpact, updateCombatVisuals } from './combat.js';
-import { playHit, playKill, playExplosion, playWaveStart, playBossSpawn, playPickup, playDeath, playCombo, resumeAudio } from './audio.js';
+import { playHit, playKill, playExplosion, playWaveStart, playBossSpawn, playPickup, playDeath, playCombo, resumeAudio, playShot } from './audio.js';
 import { getInput, getMobileInput, isMobile, setupMobileControls } from './input.js';
 import { connect, sendInput, sendPing, getState, getMyId, getPing, drainEvents } from './network.js';
 import { showTitle, showHUD, showGameOver, updateHUD, showCombo, updatePing, getPlayerName, updateUpgradeDisplay } from './ui.js';
@@ -176,11 +176,17 @@ function gameLoop() {
         // Gun shot visual
         const px = predictedX;
         const pz = predictedZ;
-        if (input.attack && now - lastAttackTime > 150) {
-          lastAttackTime = now;
-          const angle = Math.atan2(input.aimZ - pz, input.aimX - px);
-          showGunShot(px, pz, angle);
-          triggerCamKick(angle);
+        if (input.attack) {
+          const weaponType = me.weapon || 'pistol';
+          const wepCooldowns = { pistol: 150, shotgun: 400, railgun: 800, flamethrower: 80 };
+          const cooldown = wepCooldowns[weaponType] || 150;
+          if (now - lastAttackTime > cooldown) {
+            lastAttackTime = now;
+            const angle = Math.atan2(input.aimZ - pz, input.aimX - px);
+            showGunShot(px, pz, angle, weaponType);
+            playShot(weaponType);
+            triggerCamKick(angle);
+          }
         }
         if (input.special && now - lastSpecialTime > 3000) {
           lastSpecialTime = now;

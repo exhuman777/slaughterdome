@@ -39,6 +39,14 @@ function tone(freq, duration, volume = 0.2) {
   osc.stop(c.currentTime + duration);
 }
 
+export function playShot(weaponType) {
+  switch (weaponType) {
+    case 'shotgun': noise(0.08, 400, 'lowpass'); noise(0.04, 1200); break;
+    case 'railgun': tone(2000, 0.06, 0.15); tone(3000, 0.03, 0.1); break;
+    case 'flamethrower': noise(0.03, 600, 'bandpass'); break;
+    default: noise(0.04, 1000); break;
+  }
+}
 export function playHit(damage) { noise(0.05, 800 + damage * 30); }
 export function playKill() { tone(600, 0.15, 0.15); setTimeout(() => tone(900, 0.1, 0.1), 50); }
 export function playExplosion() { noise(0.3, 100, 'lowpass'); }
