@@ -1,7 +1,7 @@
 import {
   TICK_MS, TICK_RATE, ARENA_RADIUS, PLAYER, COMBO_DECAY_MS, COMBO_TIERS,
   PICKUP_DROP_BASE, PICKUP_DROP_COMBO_BONUS, PICKUP_DESPAWN_MS, PICKUPS,
-  WAVE_REST_MS, SCALING, ENEMY_DEFS, WALL,
+  WAVE_REST_MS, SCALING, ENEMY_DEFS, WALL, DASH,
   ARENA_SHRINK_PER_WAVE, ARENA_MIN_RADIUS, ARENA_OUTSIDE_DPS,
   waveEnemyCount, enemyTypesForWave, scaleStat,
 } from './config.js';
@@ -61,13 +61,36 @@ function tickRoom(room) {
 function updatePlayers(room, dt) {
   for (const [, p] of room.players) {
     if (!p.alive) continue;
-    const dx = p.input.dx;
-    const dz = p.input.dz;
-    const len = Math.sqrt(dx * dx + dz * dz);
-    if (len > 0) {
-      const speed = p.buffs.speed > 0 ? PLAYER.speed * 1.5 : PLAYER.speed;
-      p.x += (dx / len) * speed * dt;
-      p.z += (dz / len) * speed * dt;
+    // Dash processing
+    if (p.input.dash && p.dashCooldown <= 0 && p.dashTimer <= 0) {
+      let ddx = p.input.dx, ddz = p.input.dz;
+      const dlen = Math.sqrt(ddx * ddx + ddz * ddz);
+      if (dlen > 0) { ddx /= dlen; ddz /= dlen; }
+      else {
+        const aDx = p.input.aimX - p.x, aDz = p.input.aimZ - p.z;
+        const aLen = Math.sqrt(aDx * aDx + aDz * aDz) || 1;
+        ddx = aDx / aLen; ddz = aDz / aLen;
+      }
+      p.dashDirX = ddx; p.dashDirZ = ddz;
+      p.dashTimer = DASH.duration;
+      p.dashCooldown = DASH.cooldown;
+      p.dashIframes = DASH.iframes;
+      p.input.dash = false;
+    }
+    if (p.dashTimer > 0) {
+      p.dashTimer -= TICK_MS;
+      if (p.dashIframes > 0) p.dashIframes -= TICK_MS;
+      p.x += p.dashDirX * DASH.speed * dt;
+      p.z += p.dashDirZ * DASH.speed * dt;
+    } else {
+      const dx = p.input.dx;
+      const dz = p.input.dz;
+      const len = Math.sqrt(dx * dx + dz * dz);
+      if (len > 0) {
+        const speed = p.buffs.speed > 0 ? PLAYER.speed * 1.5 : PLAYER.speed;
+        p.x += (dx / len) * speed * dt;
+        p.z += (dz / len) * speed * dt;
+      }
     }
     const dist = Math.sqrt(p.x * p.x + p.z * p.z);
     if (dist > room.arenaRadius - 1) {
@@ -105,6 +128,7 @@ function updatePlayers(room, dt) {
       p.wallRechargeTimer -= TICK_MS;
       if (p.wallRechargeTimer <= 0) p.wallCharges = WALL.charges;
     }
+    if (p.dashCooldown > 0) p.dashCooldown -= TICK_MS;
     // Arena outside damage
     const pDist = Math.sqrt(p.x * p.x + p.z * p.z);
     if (pDist > room.arenaRadius - 1) {
@@ -188,6 +212,7 @@ function bomberExplode(room, x, z) {
 
 function damagePlayer(room, player, dmg) {
   if (!player.alive) return;
+  if (player.dashIframes > 0) return;
   const actual = player.buffs.shield > 0 ? Math.floor(dmg * 0.5) : dmg;
   player.hp -= actual;
   room.broadcast({ t: 'hit', target: player.id, dmg: actual, from: 'enemy' });
