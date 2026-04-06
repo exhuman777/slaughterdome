@@ -80,21 +80,23 @@ function updatePlayers(room, dt) {
       }
       p.dashDirX = ddx; p.dashDirZ = ddz;
       p.dashTimer = DASH.duration;
-      p.dashCooldown = DASH.cooldown;
+      p.dashCooldown = Math.max(800, DASH.cooldown - (p.upgrades.dash_cooldown || 0) * 300);
       p.dashIframes = DASH.iframes;
       p.input.dash = false;
     }
     if (p.dashTimer > 0) {
       p.dashTimer -= TICK_MS;
       if (p.dashIframes > 0) p.dashIframes -= TICK_MS;
-      p.x += p.dashDirX * DASH.speed * dt;
-      p.z += p.dashDirZ * DASH.speed * dt;
+      const dashSpeed = DASH.speed * (1 + (p.upgrades.dash_distance || 0) * 0.2);
+      p.x += p.dashDirX * dashSpeed * dt;
+      p.z += p.dashDirZ * dashSpeed * dt;
     } else {
       const dx = p.input.dx;
       const dz = p.input.dz;
       const len = Math.sqrt(dx * dx + dz * dz);
       if (len > 0) {
-        const speed = p.buffs.speed > 0 ? PLAYER.speed * 1.5 : PLAYER.speed;
+        const baseSpeed = PLAYER.speed + (p.upgrades.move_speed || 0);
+        const speed = p.buffs.speed > 0 ? baseSpeed * 1.5 : baseSpeed;
         p.x += (dx / len) * speed * dt;
         p.z += (dz / len) * speed * dt;
       }
@@ -127,7 +129,7 @@ function updatePlayers(room, dt) {
       p.wallPlaceCooldown = WALL.placeCooldown;
       if (p.wallCharges <= 0) p.wallRechargeTimer = WALL.cooldown;
       const aimAngle = Math.atan2(p.input.aimZ - p.z, p.input.aimX - p.x);
-      spawnWall(room, p.x + Math.cos(aimAngle) * 2.5, p.z + Math.sin(aimAngle) * 2.5, aimAngle + Math.PI / 2);
+      spawnWall(room, p.x + Math.cos(aimAngle) * 2.5, p.z + Math.sin(aimAngle) * 2.5, aimAngle + Math.PI / 2, p);
       p.input.wall = false;
     }
     if (p.wallPlaceCooldown > 0) p.wallPlaceCooldown -= TICK_MS;
@@ -141,10 +143,18 @@ function updatePlayers(room, dt) {
     if (pDist > room.arenaRadius - 1) {
       damagePlayer(room, p, Math.ceil(ARENA_OUTSIDE_DPS * dt));
     }
+    const magnetRange = 1.5 + (p.upgrades.magnet || 0) * 3;
+    const magnetRangeSq = magnetRange * magnetRange;
     for (const [pkId, pk] of room.pickups) {
       const pdx = pk.x - p.x;
       const pdz = pk.z - p.z;
-      if (pdx * pdx + pdz * pdz < 2.25) {
+      const distSq = pdx * pdx + pdz * pdz;
+      if (distSq < magnetRangeSq && distSq > 2.25) {
+        const dist = Math.sqrt(distSq);
+        pk.x -= (pdx / dist) * 8 * dt;
+        pk.z -= (pdz / dist) * 8 * dt;
+      }
+      if (distSq < 2.25) {
         applyPickup(p, pk);
         room.pickups.delete(pkId);
       }
@@ -183,6 +193,10 @@ function pDamage(player) {
 function damageEnemy(room, enemy, dmg, player, crit) {
   enemy.hp -= dmg;
   room.broadcast({ t: 'hit', target: enemy.id, dmg, from: player.id, crit, pos: [enemy.x, 0, enemy.z] });
+  if (player && player.upgrades.lifesteal) {
+    const heal = Math.floor(dmg * 0.03 * player.upgrades.lifesteal);
+    if (heal > 0) player.hp = Math.min(player.hp + heal, player.maxHp);
+  }
   if (enemy.hp <= 0) killEnemy(room, enemy, player);
 }
 
@@ -190,7 +204,10 @@ function killEnemy(room, enemy, player) {
   room.enemies.delete(enemy.id);
   player.kills++;
   room.combo++;
-  room.comboTimer = COMBO_DECAY_MS;
+  const maxDecayStacks = Math.max(0, ...[...room.players.values()]
+    .filter(p => p.alive)
+    .map(p => p.upgrades.combo_decay || 0));
+  room.comboTimer = COMBO_DECAY_MS + maxDecayStacks * 500;
   const tier = getComboTier(room.combo);
   const multiplier = tier ? tier.multiplier : 1;
   const isBoss = enemy.type === 'titan';
@@ -256,6 +273,10 @@ function updateEnemies(room, dt) {
         } else if (e.attackCooldown <= 0) {
           damagePlayer(room, target, e.damage);
           e.attackCooldown = 1000;
+          if (target.upgrades && target.upgrades.thorns) {
+            const thornsDmg = 5 * target.upgrades.thorns;
+            damageEnemy(room, e, thornsDmg, target, false);
+          }
           if (e.type === 'brute' && dist > 0) {
             const kb = 3 / dist;
             target.x += dx * kb; target.z += dz * kb;
@@ -287,7 +308,12 @@ function updateEnemies(room, dt) {
           for (const [, p] of room.players) {
             if (!p.alive) continue;
             const pdx = p.x - e.x; const pdz = p.z - e.z;
-            if (pdx * pdx + pdz * pdz < 2) damagePlayer(room, p, e.damage);
+            if (pdx * pdx + pdz * pdz < 2) {
+              damagePlayer(room, p, e.damage);
+              if (p.upgrades && p.upgrades.thorns) {
+                damageEnemy(room, e, 5 * p.upgrades.thorns, p, false);
+              }
+            }
           }
           if (e.chargeTimer <= 0) { e.aiState = 'idle'; e.chargeCooldown = 2000; }
         }
@@ -313,7 +339,11 @@ function updateEnemies(room, dt) {
         e.x += (sdx / sdist) * e.speed * dt;
         e.z += (sdz / sdist) * e.speed * dt;
         if (dist < 1.5 && e.attackCooldown <= 0) {
-          damagePlayer(room, target, e.damage); e.attackCooldown = 800;
+          damagePlayer(room, target, e.damage);
+          e.attackCooldown = 800;
+          if (target.upgrades && target.upgrades.thorns) {
+            damageEnemy(room, e, 5 * target.upgrades.thorns, target, false);
+          }
         }
         break;
       }
@@ -401,9 +431,10 @@ function spawnProjectile(room, x, z, vx, vz, type, damage, owner) {
   room.projectiles.set(id, { id, x, z, vx, vz, type, damage, age: 0, owner: owner || null });
 }
 
-function spawnWall(room, x, z, angle) {
+function spawnWall(room, x, z, angle, player) {
   const id = 'w' + nextWallId++;
-  room.walls.set(id, { id, x, z, angle, hp: WALL.hp, maxHp: WALL.hp, age: 0 });
+  const wallHp = WALL.hp + ((player && player.upgrades.wall_hp) || 0) * 30;
+  room.walls.set(id, { id, x, z, angle, hp: wallHp, maxHp: wallHp, age: 0 });
 }
 
 function updateWalls(room) {
@@ -432,8 +463,13 @@ function spawnPickup(room, x, z) {
 
 function updateCombo(room) {
   if (room.combo > 0) {
+    const maxDecayStacks = Math.max(0, ...[...room.players.values()]
+      .filter(p => p.alive)
+      .map(p => p.upgrades.combo_decay || 0));
+    const decayTime = COMBO_DECAY_MS + maxDecayStacks * 500;
     room.comboTimer -= TICK_MS;
     if (room.comboTimer <= 0) room.combo = 0;
+    if (room.comboTimer > decayTime) room.comboTimer = decayTime;
   }
 }
 
