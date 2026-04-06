@@ -8,7 +8,7 @@ let pingMs = 0;
 const WS_URL = window.SLAUGHTERDOME_WS || (
   location.hostname === 'localhost'
     ? 'ws://localhost:3001'
-    : 'wss://slaughterdome-server.up.railway.app'
+    : 'wss://slaughterdome-server-production.up.railway.app'
 );
 
 export function connect(name) {
