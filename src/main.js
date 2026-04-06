@@ -10,7 +10,7 @@ import { showGunShot, showSpecialAttack, showDamageNumber, showExplosion, showHi
 import { playHit, playKill, playExplosion, playWaveStart, playBossSpawn, playPickup, playDeath, playCombo, resumeAudio, playShot } from './audio.js';
 import { getInput, getMobileInput, isMobile, setupMobileControls } from './input.js';
 import { connect, sendInput, sendPing, getState, getMyId, getPing, drainEvents } from './network.js';
-import { showTitle, showHUD, showGameOver, updateHUD, showCombo, updatePing, getPlayerName, updateUpgradeDisplay } from './ui.js';
+import { showTitle, showHUD, showGameOver, updateHUD, showCombo, updatePing, getPlayerName, updateUpgradeDisplay, updateWeaponHUD, showControlsHint, hideControlsHint, updateCountdown } from './ui.js';
 import { showUpgradeShop, hideUpgradeShop } from './upgrades.js';
 
 initRenderer();
@@ -63,6 +63,7 @@ async function startGame() {
     await connect(name);
     gameActive = true;
     showHUD();
+    showControlsHint();
     playerIndex = 0;
     knownPlayers.clear();
     knownEnemies.clear();
@@ -178,7 +179,7 @@ function gameLoop() {
         const pz = predictedZ;
         if (input.attack) {
           const weaponType = me.weapon || 'pistol';
-          const wepCooldowns = { pistol: 150, shotgun: 400, railgun: 800, flamethrower: 80 };
+          const wepCooldowns = { pistol: 150, shotgun: 400, railgun: 400, flamethrower: 80 };
           const cooldown = wepCooldowns[weaponType] || 150;
           if (now - lastAttackTime > cooldown) {
             lastAttackTime = now;
@@ -340,7 +341,10 @@ function processState(state, dt) {
     const dashPct = me.dashCooldown > 0 ? Math.max(0, 1 - me.dashCooldown / 2000) * 100 : 100;
     const dashFill = document.getElementById('dash-fill');
     if (dashFill) dashFill.style.width = dashPct + '%';
+    const magSizes = { pistol: 12, shotgun: 6, railgun: 5, flamethrower: 40 };
+    updateWeaponHUD(me.weapon, me.ammo, magSizes[me.weapon || 'pistol'] || 12, me.reloading);
   }
+  updateCountdown(state.phase, state.waveTimer);
 
   setBiome(state.wave);
   showCombo(state.combo);
@@ -408,6 +412,7 @@ function handleEvent(ev) {
       gameActive = false;
       hasPrediction = false;
       hideUpgradeShop();
+      hideControlsHint();
       showGameOver(ev.wave, ev.score, ev.kills);
       playDeath();
       break;

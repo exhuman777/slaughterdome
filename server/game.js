@@ -114,7 +114,16 @@ function updatePlayers(room, dt) {
         if (p.buffs[buff] <= 0) delete p.buffs[buff];
       }
     }
-    if (p.input.attack && p.shootCooldown <= 0) {
+    // Reload timer
+    if (p.reloadTimer > 0) {
+      p.reloadTimer -= TICK_MS;
+      if (p.reloadTimer <= 0) {
+        const wep = WEAPONS[p.weapon || 'pistol'];
+        p.ammo = wep.magSize;
+        p.reloadTimer = 0;
+      }
+    }
+    if (p.input.attack && p.shootCooldown <= 0 && p.reloadTimer <= 0 && p.ammo > 0) {
       const aimAngle = Math.atan2(p.input.aimZ - p.z, p.input.aimX - p.x);
       playerShoot(room, p, aimAngle);
     }
@@ -165,6 +174,10 @@ function playerShoot(room, player, aimAngle) {
   const wep = WEAPONS[player.weapon || 'pistol'];
   const cooldown = Math.max(50, wep.cooldown * Math.pow(0.85, player.upgrades.fire_rate || 0));
   player.shootCooldown = cooldown;
+  player.ammo--;
+  if (player.ammo <= 0) {
+    player.reloadTimer = wep.reloadMs;
+  }
   const baseDmg = pDamage(player);
   const dmg = Math.floor(baseDmg * wep.damageMult);
   const pierceCount = wep.pierce + (player.upgrades.pierce || 0);
@@ -376,7 +389,7 @@ function updateEnemies(room, dt) {
       if (wdist < WALL.collisionRadius && wdist > 0) {
         const push = (WALL.collisionRadius - wdist) / wdist;
         e.x += wdx * push; e.z += wdz * push;
-        w.hp -= e.damage * dt * 0.5;
+        w.hp -= e.damage * dt * 0.15;
       }
     }
     const edist = Math.sqrt(e.x * e.x + e.z * e.z);
@@ -604,6 +617,8 @@ export function applyUpgrade(player, upgradeKey) {
   if (!def) return;
   if (def.category === 'weapon_swap') {
     player.weapon = upgradeKey;
+    player.ammo = WEAPONS[upgradeKey].magSize;
+    player.reloadTimer = 0;
   } else {
     player.upgrades[upgradeKey] = (player.upgrades[upgradeKey] || 0) + 1;
   }

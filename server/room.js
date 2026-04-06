@@ -1,4 +1,4 @@
-import { MAX_PLAYERS, ROOM_CLEANUP_MS, PLAYER, ARENA_RADIUS, WALL } from './config.js';
+import { MAX_PLAYERS, ROOM_CLEANUP_MS, PLAYER, ARENA_RADIUS, WALL, WEAPONS } from './config.js';
 
 let nextRoomId = 1;
 let nextPlayerId = 1;
@@ -40,6 +40,7 @@ export class Room {
       wallCharges: WALL.charges, wallPlaceCooldown: 0, wallRechargeTimer: 0,
       dashTimer: 0, dashCooldown: 0, dashDirX: 0, dashDirZ: 0, dashIframes: 0,
       upgrades: {}, weapon: 'pistol', pendingUpgrades: null,
+      ammo: WEAPONS.pistol.magSize, reloadTimer: 0,
     };
     this.players.set(id, player);
     if (this.cleanupTimer) { clearTimeout(this.cleanupTimer); this.cleanupTimer = null; }
@@ -81,6 +82,8 @@ export class Room {
         dashCooldown: p.dashCooldown,
         upgrades: p.upgrades,
         weapon: p.weapon,
+        ammo: p.ammo,
+        reloading: p.reloadTimer > 0,
       });
     }
     const enemies = [];
@@ -107,7 +110,7 @@ export class Room {
       t: 'state', tick: this.tick,
       players, enemies, pickups, projectiles, walls,
       wave: this.wave, score: this.score, combo: this.combo, phase: this.state,
-      arenaRadius: this.arenaRadius,
+      arenaRadius: this.arenaRadius, waveTimer: this.waveTimer,
     };
   }
 }

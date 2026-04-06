@@ -19,16 +19,16 @@ export function showGunShot(px, pz, angle, weaponType) {
     const beamMat = new THREE.MeshBasicMaterial({ color: 0x44ddff, transparent: true, opacity: 0.9, side: THREE.DoubleSide });
     const beam = new THREE.Mesh(beamGeo, beamMat);
     beam.position.set(mx, 1.2, mz);
-    beam.rotation.set(Math.PI / 2, 0, -angle);
+    beam.rotation.set(-Math.PI / 2, angle, 0);
     scene.add(beam);
-    effects.push({ mesh: beam, mat: beamMat, life: 0.2, maxLife: 0.2 });
+    effects.push({ mesh: beam, mat: beamMat, life: 0.5, maxLife: 0.5 });
     // Bright origin flash
-    const flashGeo = new THREE.SphereGeometry(0.4, 8, 8);
+    const flashGeo = new THREE.SphereGeometry(0.5, 8, 8);
     const flashMat = new THREE.MeshBasicMaterial({ color: 0x88eeff, transparent: true, opacity: 1 });
     const flash = new THREE.Mesh(flashGeo, flashMat);
     flash.position.set(fx, 1.2, fz);
     scene.add(flash);
-    effects.push({ mesh: flash, mat: flashMat, life: 0.08, maxLife: 0.08 });
+    effects.push({ mesh: flash, mat: flashMat, life: 0.15, maxLife: 0.15 });
     return;
   }
 
@@ -105,7 +105,7 @@ export function showDamageNumber(x, z, dmg, crit) {
   const text = crit ? 'CRIT ' + dmg + '!' : '' + dmg;
   const off = DMG_OFFSETS[dmgSlot % DMG_OFFSETS.length];
   dmgSlot++;
-  spawnFloatingText(x + off[0], z + off[1], text, color, crit ? 2.5 : 1.5);
+  spawnFloatingText(x + off[0], z + off[1], text, color, crit ? 4 : 2.5);
   if (crit) spawnSparks(x, z, 0xffff44, 12);
 }
 

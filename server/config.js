@@ -3,7 +3,7 @@ export const TICK_MS = 1000 / TICK_RATE;
 export const ARENA_RADIUS = 40;
 export const MAX_PLAYERS = 4;
 export const GRACE_PERIOD_MS = 5000;
-export const WAVE_REST_MS = 10000;
+export const WAVE_REST_MS = 5000;
 export const ROOM_CLEANUP_MS = 30000;
 
 export const PLAYER = {
@@ -42,11 +42,11 @@ export const PICKUP_DROP_BASE = 0.15;
 export const PICKUP_DROP_COMBO_BONUS = 0.02;
 
 export const WALL = {
-  hp: 80,
+  hp: 250,
   charges: 3,
   cooldown: 15000,
   placeCooldown: 500,
-  collisionRadius: 2,
+  collisionRadius: 2.5,
   lifetime: 30000,
 };
 
@@ -107,10 +107,10 @@ export const UPGRADE_TIER_WEIGHTS = {
 };
 
 export const WEAPONS = {
-  pistol:       { bullets: 1, spread: 0,   cooldown: 150, damageMult: 1.0, speed: 35, pierce: 0, range: 3000 },
-  shotgun:      { bullets: 5, spread: 0.3, cooldown: 400, damageMult: 0.7, speed: 25, pierce: 0, range: 1500 },
-  railgun:      { bullets: 1, spread: 0,   cooldown: 800, damageMult: 3.0, speed: 50, pierce: 999, range: 3000 },
-  flamethrower: { bullets: 3, spread: 0.4, cooldown: 80,  damageMult: 0.3, speed: 15, pierce: 0, range: 500 },
+  pistol:       { bullets: 1, spread: 0,   cooldown: 150, damageMult: 1.0, speed: 35, pierce: 0, range: 3000, magSize: 12, reloadMs: 1500 },
+  shotgun:      { bullets: 5, spread: 0.3, cooldown: 400, damageMult: 0.7, speed: 25, pierce: 0, range: 1500, magSize: 6,  reloadMs: 2000 },
+  railgun:      { bullets: 1, spread: 0,   cooldown: 400, damageMult: 3.0, speed: 50, pierce: 999, range: 3000, magSize: 5, reloadMs: 2000 },
+  flamethrower: { bullets: 3, spread: 0.4, cooldown: 80,  damageMult: 0.3, speed: 15, pierce: 0, range: 500,  magSize: 40, reloadMs: 2000 },
 };
 
 export const PLAYER_COUNT_SCALING = [0, 1, 1.5, 2, 2.5];

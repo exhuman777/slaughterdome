@@ -120,23 +120,23 @@ export function spawnAoeRing(x, z, radius, color) {
 
 export function spawnFloatingText(x, z, text, color, scale) {
   const canvas = document.createElement('canvas');
-  canvas.width = 256; canvas.height = 64;
+  canvas.width = 512; canvas.height = 128;
   const ctx = canvas.getContext('2d');
-  ctx.font = 'bold 48px Courier New';
+  ctx.font = '900 72px Courier New';
   ctx.strokeStyle = '#000000';
-  ctx.lineWidth = 4;
+  ctx.lineWidth = 6;
   ctx.textAlign = 'center';
-  ctx.strokeText(text, 128, 48);
+  ctx.strokeText(text, 256, 90);
   ctx.fillStyle = color || '#ffffff';
-  ctx.fillText(text, 128, 48);
+  ctx.fillText(text, 256, 90);
   const tex = new THREE.CanvasTexture(canvas);
   const mat = new THREE.SpriteMaterial({ map: tex, transparent: true });
   const sprite = new THREE.Sprite(mat);
   sprite.position.set(x, 2.5, z);
-  const s = scale || 1.5;
+  const s = scale || 2;
   sprite.scale.set(s * 2, s, 1);
   scene.add(sprite);
-  particles.push({ mesh: sprite, mat, vx: 0, vy: 3, vz: 0, life: 0.8, decay: 1.2, isSprite: true });
+  particles.push({ mesh: sprite, mat, vx: 0, vy: 3, vz: 0, life: 1.2, decay: 0.9, isSprite: true });
 }
 
 export function updateParticles(dt) {

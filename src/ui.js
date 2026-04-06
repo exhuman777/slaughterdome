@@ -61,13 +61,56 @@ export function getPlayerName() {
 }
 
 const upgradeStrip = document.getElementById('upgrade-strip');
+const weaponEl = document.getElementById('hud-weapon');
+const weaponName = document.getElementById('weapon-name');
+const ammoFill = document.getElementById('ammo-fill');
+const ammoText = document.getElementById('ammo-text');
+const controlsEl = document.getElementById('hud-controls');
+const countdownEl = document.getElementById('hud-countdown');
+
+const UPGRADE_NAMES = {
+  fire_rate: 'RAPID', bullet_size: 'BIG RND', pierce: 'PIERCE', crit_chance: 'PRECISION',
+  crit_damage: 'DEVASTATE', move_speed: 'SWIFT', dash_cooldown: 'QDASH', dash_distance: 'LDASH',
+  max_hp: 'VITALITY', wall_hp: 'FORTIFY', thorns: 'THORNS', lifesteal: 'VAMP',
+  magnet: 'MAGNET', combo_decay: 'MOMENTUM',
+};
 
 export function updateUpgradeDisplay(upgrades) {
   if (!upgradeStrip || !upgrades) return;
   const parts = [];
   for (const [key, count] of Object.entries(upgrades)) {
-    const short = key.slice(0, 4).toUpperCase();
-    parts.push(short + '+' + count);
+    const name = UPGRADE_NAMES[key] || key.toUpperCase();
+    parts.push(name + (count > 1 ? 'x' + count : ''));
   }
-  upgradeStrip.textContent = parts.join(' ');
+  upgradeStrip.textContent = parts.join('  ');
+}
+
+export function updateWeaponHUD(weapon, ammo, maxAmmo, reloading) {
+  if (!weaponEl) return;
+  weaponEl.style.display = 'block';
+  weaponName.textContent = (weapon || 'PISTOL').toUpperCase() + (reloading ? ' [RELOADING]' : '');
+  weaponName.style.color = reloading ? '#ff4444' : '#fff';
+  const pct = maxAmmo > 0 ? (ammo / maxAmmo) * 100 : 100;
+  ammoFill.style.width = pct + '%';
+  ammoFill.style.background = pct > 30 ? '#ffcc44' : '#ff4444';
+  ammoText.textContent = ammo + '/' + maxAmmo;
+}
+
+export function showControlsHint() {
+  if (controlsEl) controlsEl.style.display = 'block';
+}
+
+export function hideControlsHint() {
+  if (controlsEl) controlsEl.style.display = 'none';
+}
+
+export function updateCountdown(phase, timerMs) {
+  if (!countdownEl) return;
+  if (phase === 'countdown' && timerMs > 0) {
+    const secs = Math.ceil(timerMs / 1000);
+    countdownEl.textContent = 'NEXT WAVE IN ' + secs;
+    countdownEl.style.display = 'block';
+  } else {
+    countdownEl.style.display = 'none';
+  }
 }
