@@ -1,6 +1,6 @@
 import { initRenderer, render, clock, updateCamera, setCamDt, triggerShake, startHitstop, tickHitstop } from './renderer.js';
 import { createArena, setBiome, updateBiome, updateArenaRadius } from './arena.js';
-import { createPlayerMesh, updatePlayerMesh, setPlayerRotation, removePlayerMesh, markLocalPlayer } from './player.js';
+import { createPlayerMesh, updatePlayerMesh, setPlayerRotation, setPlayerDashing, removePlayerMesh, markLocalPlayer } from './player.js';
 import { createEnemyMesh, updateEnemyMesh, flashEnemy, removeEnemyMesh, removeAllEnemies } from './enemy.js';
 import { updatePickups as updatePickupMeshes, syncPickups } from './pickups.js';
 import { updateParticles, spawnKillParticles, spawnSparks, spawnBloodDrops, spawnNeonPop } from './particles.js';
@@ -41,6 +41,9 @@ const wallMat = new THREE.MeshStandardMaterial({ color: 0x888899, roughness: 0.5
 const PREDICTED_SPEED = 10;
 let predictedX = 0, predictedZ = 0;
 let hasPrediction = false;
+let predDashTimer = 0, predDashDirX = 0, predDashDirZ = 0;
+const DASH_SPEED = 30;
+const DASH_DURATION = 250;
 let currentArenaRadius = 40;
 
 if (isMobile()) setupMobileControls();
@@ -60,6 +63,7 @@ async function startGame() {
     knownEnemies.clear();
     removeAllEnemies();
     hasPrediction = false;
+    predDashTimer = 0;
     markLocalPlayer(getMyId());
   } catch (err) {
     console.error('Connection failed:', err);
@@ -105,16 +109,35 @@ function gameLoop() {
           predictedZ = me.pos[2];
           hasPrediction = true;
         }
-        if (input.dx !== 0 || input.dz !== 0) {
+
+        // Dash prediction
+        if (input.dash && !predDashTimer) {
+          let ddx = input.dx, ddz = input.dz;
+          const dlen = Math.sqrt(ddx * ddx + ddz * ddz);
+          if (dlen > 0) { ddx /= dlen; ddz /= dlen; }
+          else {
+            const aDx = input.aimX - predictedX, aDz = input.aimZ - predictedZ;
+            const aLen = Math.sqrt(aDx * aDx + aDz * aDz) || 1;
+            ddx = aDx / aLen; ddz = aDz / aLen;
+          }
+          predDashDirX = ddx; predDashDirZ = ddz;
+          predDashTimer = DASH_DURATION;
+        }
+
+        if (predDashTimer > 0) {
+          predDashTimer -= dtMs;
+          predictedX += predDashDirX * DASH_SPEED * dt;
+          predictedZ += predDashDirZ * DASH_SPEED * dt;
+        } else if (input.dx !== 0 || input.dz !== 0) {
           const speed = (me.buffs && me.buffs.includes('speed')) ? PREDICTED_SPEED * 1.5 : PREDICTED_SPEED;
           predictedX += input.dx * speed * dt;
           predictedZ += input.dz * speed * dt;
-          const pDist = Math.sqrt(predictedX * predictedX + predictedZ * predictedZ);
-          if (pDist > currentArenaRadius - 1) {
-            const s = (currentArenaRadius - 1) / pDist;
-            predictedX *= s;
-            predictedZ *= s;
-          }
+        }
+        const pDist = Math.sqrt(predictedX * predictedX + predictedZ * predictedZ);
+        if (pDist > currentArenaRadius - 1) {
+          const s = (currentArenaRadius - 1) / pDist;
+          predictedX *= s;
+          predictedZ *= s;
         }
 
         // Gun shot visual
@@ -192,6 +215,7 @@ function processState(state, dt) {
       const correction = 1 - Math.exp(-5 * dt);
       predictedX += (p.pos[0] - predictedX) * correction;
       predictedZ += (p.pos[2] - predictedZ) * correction;
+      if (!p.dashing && predDashTimer > 0) predDashTimer = 0;
       updatePlayerMesh(p.id, predictedX, predictedZ, p.alive, moving || (lastInput.dx !== 0 || lastInput.dz !== 0), dt);
       if (p.alive) {
         setPlayerRotation(p.id, Math.atan2(lastInput.aimZ - predictedZ, lastInput.aimX - predictedX));
@@ -202,6 +226,7 @@ function processState(state, dt) {
         setPlayerRotation(p.id, Math.atan2(lastInput.aimZ - p.pos[2], lastInput.aimX - p.pos[0]));
       }
     }
+    setPlayerDashing(p.id, p.id === myId ? predDashTimer > 0 : p.dashing);
   }
 
   const serverEnemyIds = new Set(state.enemies.map(e => e.id));
@@ -270,6 +295,11 @@ function processState(state, dt) {
 
   const me = state.players.find(p => p.id === myId);
   if (me) updateHUD(state.wave, state.score, me.hp, me.maxHp);
+  if (me) {
+    const dashPct = me.dashCooldown > 0 ? Math.max(0, 1 - me.dashCooldown / 2000) * 100 : 100;
+    const dashFill = document.getElementById('dash-fill');
+    if (dashFill) dashFill.style.width = dashPct + '%';
+  }
 
   setBiome(state.wave);
   showCombo(state.combo);

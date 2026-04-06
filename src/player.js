@@ -78,6 +78,16 @@ export function setPlayerRotation(id, angle) {
   if (pm) pm.group.rotation.y = -angle + Math.PI / 2;
 }
 
+export function setPlayerDashing(id, dashing) {
+  const pm = playerMeshes.get(id);
+  if (!pm) return;
+  if (dashing) {
+    pm.group.scale.set(0.8, 1.2, 1.0);
+  } else {
+    pm.group.scale.lerp(new THREE.Vector3(1, 1, 1), 0.3);
+  }
+}
+
 export function removePlayerMesh(id) {
   const pm = playerMeshes.get(id);
   if (pm) { scene.remove(pm.group); playerMeshes.delete(id); }
