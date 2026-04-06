@@ -83,8 +83,8 @@ export function tickHitstop(dtMs) {
 }
 
 export function triggerCamKick(aimAngle) {
-  camKickX = -Math.cos(aimAngle) * 1.5;
-  camKickZ = -Math.sin(aimAngle) * 1.5;
+  camKickX = -Math.cos(aimAngle) * 0.4;
+  camKickZ = -Math.sin(aimAngle) * 0.4;
 }
 
 let lastCamDt = 0.016;
@@ -109,8 +109,8 @@ export function updateCamera(targetX, targetZ, aimX, aimZ) {
 
   camera.position.x += camKickX;
   camera.position.z += camKickZ;
-  camKickX *= 0.7;
-  camKickZ *= 0.7;
+  camKickX *= 0.5;
+  camKickZ *= 0.5;
   if (Math.abs(camKickX) < 0.01) camKickX = 0;
   if (Math.abs(camKickZ) < 0.01) camKickZ = 0;
 
