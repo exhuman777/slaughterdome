@@ -14,9 +14,13 @@ let nextWallId = 1;
 
 export function startGameLoop(roomManager) {
   setInterval(() => {
-    roomManager.cleanup();
-    for (const room of roomManager.activeRooms) {
-      tickRoom(room);
+    try {
+      roomManager.cleanup();
+      for (const room of roomManager.activeRooms) {
+        tickRoom(room);
+      }
+    } catch (err) {
+      console.error('Game loop error:', err);
     }
   }, TICK_MS);
 }
@@ -101,6 +105,17 @@ function updatePlayers(room, dt) {
         p.z += (dz / len) * speed * dt;
       }
     }
+    // Player-wall collision
+    for (const [, w] of room.walls) {
+      const wdx = p.x - w.x; const wdz = p.z - w.z;
+      const wdist = Math.sqrt(wdx * wdx + wdz * wdz);
+      if (wdist < WALL.collisionRadius && wdist > 0.01) {
+        const push = (WALL.collisionRadius - wdist) / wdist;
+        p.x += wdx * push; p.z += wdz * push;
+      }
+    }
+    // NaN guard
+    if (isNaN(p.x) || isNaN(p.z)) { p.x = 0; p.z = 0; }
     const dist = Math.sqrt(p.x * p.x + p.z * p.z);
     if (dist > room.arenaRadius - 1) {
       const s = (room.arenaRadius - 1) / dist;
@@ -214,8 +229,8 @@ function specialAttack(room, player) {
     if (dist > PLAYER.specialRange) continue;
     const dmg = Math.floor(baseDmg * 0.8);
     damageEnemy(room, e, dmg, player, false);
-    if (dist > 0) {
-      const kb = PLAYER.specialKnockback / dist;
+    if (dist > 0.5) {
+      const kb = Math.min(PLAYER.specialKnockback / dist, 10);
       e.x += dx * kb; e.z += dz * kb;
     }
   }
@@ -313,8 +328,8 @@ function updateEnemies(room, dt) {
             const thornsDmg = 5 * target.upgrades.thorns;
             damageEnemy(room, e, thornsDmg, target, false);
           }
-          if (e.type === 'brute' && dist > 0) {
-            const kb = 3 / dist;
+          if (e.type === 'brute' && dist > 0.5) {
+            const kb = Math.min(3 / dist, 5);
             target.x += dx * kb; target.z += dz * kb;
           }
         }
@@ -402,6 +417,8 @@ function updateEnemies(room, dt) {
         w.hp -= e.damage * dt * 0.15;
       }
     }
+    // NaN guard for enemies
+    if (isNaN(e.x) || isNaN(e.z)) { e.x = 0; e.z = 0; }
     const edist = Math.sqrt(e.x * e.x + e.z * e.z);
     if (edist > room.arenaRadius + 5) {
       const s = (room.arenaRadius + 5) / edist; e.x *= s; e.z *= s;
