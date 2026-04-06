@@ -609,9 +609,11 @@ function checkGameOver(room) {
   if (room.state !== 'combat') return;
   if (![...room.players.values()].some(p => p.alive)) {
     room.state = 'gameover';
-    const kills = {};
-    for (const [, p] of room.players) kills[p.id] = p.kills;
-    room.broadcast({ t: 'gameover', wave: room.wave, score: room.score, kills });
+    const players = [];
+    for (const [, p] of room.players) {
+      players.push({ id: p.id, name: p.name, kills: p.kills });
+    }
+    room.broadcast({ t: 'gameover', wave: room.wave, score: room.score, players });
   }
 }
 

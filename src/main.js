@@ -10,7 +10,7 @@ import { showGunShot, showSpecialAttack, showDamageNumber, showExplosion, showHi
 import { playHit, playKill, playExplosion, playWaveStart, playBossSpawn, playPickup, playDeath, playCombo, resumeAudio, playShot } from './audio.js';
 import { getInput, getMobileInput, isMobile, setupMobileControls } from './input.js';
 import { connect, sendInput, sendPing, getState, getMyId, getPing, drainEvents } from './network.js';
-import { showTitle, showHUD, showGameOver, updateHUD, showCombo, updatePing, getPlayerName, updateUpgradeDisplay, updateWeaponHUD, showControlsHint, hideControlsHint, updateCountdown, updateAbilities, updateInfo, updatePlayers } from './ui.js';
+import { showTitle, showHUD, showGameOver, updateHUD, showCombo, updatePing, getPlayerName, updateUpgradeDisplay, updateWeaponHUD, showControlsHint, hideControlsHint, updateCountdown, updateAbilities, updateInfo, updatePlayers, showYouDied, hideYouDied } from './ui.js';
 import { showUpgradeShop, hideUpgradeShop } from './upgrades.js';
 
 initRenderer();
@@ -58,6 +58,7 @@ let speedTrailCounter = 0;
 
 // Track server overheated state for visual sync
 let serverOverheated = false;
+let wasAlive = true;
 
 if (isMobile()) setupMobileControls();
 
@@ -80,6 +81,8 @@ async function startGame() {
     hasPrediction = false;
     predDashTimer = 0;
     serverOverheated = false;
+    wasAlive = true;
+    hideYouDied();
     markLocalPlayer(getMyId());
     scene.add(ghostWall);
   } catch (err) {
@@ -376,6 +379,14 @@ function processState(state, dt) {
     updateWeaponHUD(me.weapon, me.overheated, me.heatPct || 0);
     updateAbilities(me.wallCharges !== undefined ? me.wallCharges : 3, me.specialCd || 0, me.dashCooldown || 0);
     updateInfo(me.kills || 0);
+    // Show YOU DIED when player dies but game continues
+    if (!me.alive && wasAlive) {
+      showYouDied();
+      wasAlive = false;
+    } else if (me.alive && !wasAlive) {
+      hideYouDied();
+      wasAlive = true;
+    }
   }
   updateCountdown(state.phase, state.waveTimer);
   updatePlayers(state.playerCount || 1);
@@ -447,8 +458,9 @@ function handleEvent(ev) {
       hasPrediction = false;
       hideUpgradeShop();
       hideControlsHint();
+      hideYouDied();
       ghostWall.visible = false;
-      showGameOver(ev.wave, ev.score, ev.kills);
+      showGameOver(ev.wave, ev.score, ev.players || ev.kills);
       playDeath();
       break;
   }

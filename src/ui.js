@@ -23,12 +23,22 @@ export function showHUD() {
   showAbilities(); showInfo();
 }
 
-export function showGameOver(wave, score, kills) {
+export function showGameOver(wave, score, players) {
   gameover.style.display = 'block'; hud.style.display = 'none';
+  hideYouDied();
   goWave.textContent = 'WAVE: ' + wave;
   goScore.textContent = 'SCORE: ' + score;
-  const killLines = Object.entries(kills).map(([id, k]) => id + ': ' + k).join(' | ');
-  goKills.textContent = 'KILLS: ' + killLines;
+  // Show player names and kills
+  if (Array.isArray(players)) {
+    const sorted = [...players].sort((a, b) => b.kills - a.kills);
+    goKills.innerHTML = sorted.map(p =>
+      '<div class="go-player"><span class="go-name">' + (p.name || p.id) + '</span> -- <span class="go-kills">' + p.kills + ' KILLS</span></div>'
+    ).join('');
+  } else if (players && typeof players === 'object') {
+    // Legacy format fallback
+    const killLines = Object.entries(players).map(([id, k]) => id + ': ' + k).join(' | ');
+    goKills.textContent = 'KILLS: ' + killLines;
+  }
   hideAbilities(); hideInfo(); hidePlayers();
 }
 
@@ -120,6 +130,11 @@ export function updateCountdown(phase, timerMs) {
     countdownEl.style.display = 'none';
   }
 }
+
+// Death overlay
+const youDiedEl = document.getElementById('you-died');
+export function showYouDied() { if (youDiedEl) youDiedEl.style.display = 'block'; }
+export function hideYouDied() { if (youDiedEl) youDiedEl.style.display = 'none'; }
 
 // Abilities panel (right side)
 function showAbilities() { if (abilitiesEl) abilitiesEl.style.display = 'block'; }

@@ -59,13 +59,17 @@ export class Room {
   broadcast(msg) {
     const data = JSON.stringify(msg);
     for (const [, p] of this.players) {
-      if (p.ws.readyState === 1) p.ws.send(data);
+      try {
+        if (p.ws.readyState === 1) p.ws.send(data);
+      } catch (e) { /* socket died mid-send */ }
     }
   }
 
   sendTo(playerId, msg) {
     const p = this.players.get(playerId);
-    if (p && p.ws.readyState === 1) p.ws.send(JSON.stringify(msg));
+    try {
+      if (p && p.ws.readyState === 1) p.ws.send(JSON.stringify(msg));
+    } catch (e) { /* socket died mid-send */ }
   }
 
   destroy() { this.state = 'destroyed'; }

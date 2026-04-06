@@ -129,6 +129,12 @@
   #hud-info { position:absolute; bottom:20px; left:20px; font-size:12px; color:#c4a882; letter-spacing:1px; }
   #hud-info .info-row { margin-bottom:4px; }
   #hud-players { position:absolute; top:10px; left:50%; transform:translateX(-50%); color:#e6993a; font-size:12px; letter-spacing:2px; }
+  #you-died { position:absolute; top:35%; left:50%; transform:translate(-50%,-50%); text-align:center; display:none; z-index:10; }
+  #you-died h3 { font-size:42px; color:#ff4444; text-shadow:0 0 20px rgba(255,0,0,0.5); letter-spacing:8px; font-weight:800; margin-bottom:8px; }
+  #you-died .sub { font-size:14px; color:#888; letter-spacing:2px; }
+  #gameover .go-player { margin:6px 0; font-size:16px; color:#c4a882; }
+  #gameover .go-player .go-name { color:#e6993a; font-weight:700; }
+  #gameover .go-player .go-kills { color:#fff; }
 </style>
 </head>
 <body>
@@ -193,6 +199,7 @@
     <div class="stats" id="go-kills"></div>
     <button id="restart-btn">PLAY AGAIN</button>
   </div>
+  <div id="you-died"><h3>YOU DIED</h3><div class="sub">SPECTATING</div></div>
   <div id="ping"></div>
   <div id="hud-weapon" style="display:none;"><div id="weapon-name">PISTOL</div><div id="ammo-bar"><div id="ammo-fill" style="width:0%"></div></div><div id="ammo-text">READY</div></div>
   <div id="hud-abilities" style="display:none;"></div>
