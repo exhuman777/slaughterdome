@@ -84,7 +84,17 @@ export function tickHitstop(dtMs) {
 let lastCamDt = 0.016;
 export function setCamDt(dt) { lastCamDt = dt; }
 
-export function updateCamera(targetX, targetZ) {
+export function updateCamera(targetX, targetZ, aimX, aimZ) {
+  // Look-ahead: blend target 30% toward aim, max 5 units offset
+  if (aimX !== undefined && aimZ !== undefined) {
+    const lookX = (aimX - targetX) * 0.3;
+    const lookZ = (aimZ - targetZ) * 0.3;
+    const lookDist = Math.sqrt(lookX * lookX + lookZ * lookZ);
+    const maxOff = 5;
+    const s = lookDist > maxOff ? maxOff / lookDist : 1;
+    targetX += lookX * s;
+    targetZ += lookZ * s;
+  }
   const t = 1 - Math.exp(-12 * lastCamDt);
   const tz = targetZ + CAMERA_HEIGHT * Math.cos(CAMERA_ANGLE);
   camera.position.x += (targetX - camera.position.x) * t;

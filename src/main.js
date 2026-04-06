@@ -87,7 +87,7 @@ function gameLoop() {
     const state = getState();
     if (state && myId) {
       const me = state.players.find(p => p.id === myId);
-      if (me) updateCamera(hasPrediction ? predictedX : me.pos[0], hasPrediction ? predictedZ : me.pos[2]);
+      if (me) updateCamera(hasPrediction ? predictedX : me.pos[0], hasPrediction ? predictedZ : me.pos[2], lastInput.aimX, lastInput.aimZ);
     }
     render();
     return;
@@ -177,7 +177,7 @@ function gameLoop() {
   const state = getState();
   if (state && myId) {
     const me = state.players.find(p => p.id === myId);
-    if (me) updateCamera(hasPrediction ? predictedX : me.pos[0], hasPrediction ? predictedZ : me.pos[2]);
+    if (me) updateCamera(hasPrediction ? predictedX : me.pos[0], hasPrediction ? predictedZ : me.pos[2], lastInput.aimX, lastInput.aimZ);
   } else {
     updateCamera(0, 0);
   }
