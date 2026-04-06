@@ -1,4 +1,4 @@
-import { initRenderer, render, clock, updateCamera, setCamDt, triggerShake, startHitstop, tickHitstop } from './renderer.js';
+import { initRenderer, render, clock, updateCamera, setCamDt, triggerShake, startHitstop, tickHitstop, triggerCamKick } from './renderer.js';
 import { createArena, setBiome, updateBiome, updateArenaRadius } from './arena.js';
 import { createPlayerMesh, updatePlayerMesh, setPlayerRotation, setPlayerDashing, removePlayerMesh, markLocalPlayer } from './player.js';
 import { createEnemyMesh, updateEnemyMesh, flashEnemy, removeEnemyMesh, removeAllEnemies } from './enemy.js';
@@ -147,6 +147,7 @@ function gameLoop() {
           lastAttackTime = now;
           const angle = Math.atan2(input.aimZ - pz, input.aimX - px);
           showGunShot(px, pz, angle);
+          triggerCamKick(angle);
         }
         if (input.special && now - lastSpecialTime > 3000) {
           lastSpecialTime = now;

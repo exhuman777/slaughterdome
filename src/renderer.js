@@ -8,6 +8,7 @@ const CAMERA_ANGLE = 55 * (Math.PI / 180);
 let shakeIntensity = 0;
 let flashEl = null;
 let hitstopRemaining = 0;
+let camKickX = 0, camKickZ = 0;
 
 export function initRenderer() {
   scene = new THREE.Scene();
@@ -81,6 +82,11 @@ export function tickHitstop(dtMs) {
   return false;
 }
 
+export function triggerCamKick(aimAngle) {
+  camKickX = -Math.cos(aimAngle) * 1.5;
+  camKickZ = -Math.sin(aimAngle) * 1.5;
+}
+
 let lastCamDt = 0.016;
 export function setCamDt(dt) { lastCamDt = dt; }
 
@@ -100,6 +106,13 @@ export function updateCamera(targetX, targetZ, aimX, aimZ) {
   camera.position.x += (targetX - camera.position.x) * t;
   camera.position.z += (tz - camera.position.z) * t;
   camera.lookAt(targetX, 0, targetZ);
+
+  camera.position.x += camKickX;
+  camera.position.z += camKickZ;
+  camKickX *= 0.7;
+  camKickZ *= 0.7;
+  if (Math.abs(camKickX) < 0.01) camKickX = 0;
+  if (Math.abs(camKickZ) < 0.01) camKickZ = 0;
 
   if (shakeIntensity > 0.1) {
     camera.position.x += (Math.random() - 0.5) * shakeIntensity;
