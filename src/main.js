@@ -3,7 +3,7 @@ import { createArena, setBiome, updateBiome, updateArenaRadius } from './arena.j
 import { createPlayerMesh, updatePlayerMesh, setPlayerRotation, setPlayerDashing, removePlayerMesh, markLocalPlayer } from './player.js';
 import { createEnemyMesh, updateEnemyMesh, flashEnemy, removeEnemyMesh, removeAllEnemies } from './enemy.js';
 import { updatePickups as updatePickupMeshes, syncPickups } from './pickups.js';
-import { updateParticles, spawnKillParticles, spawnSparks, spawnBloodDrops, spawnNeonPop } from './particles.js';
+import { updateParticles, spawnKillParticles, spawnSparks, spawnBloodDrops, spawnNeonPop, spawnDustPuff, spawnSpeedTrail } from './particles.js';
 import * as THREE from 'https://esm.sh/three@0.162.0';
 import { scene } from './renderer.js';
 import { showGunShot, showSpecialAttack, showDamageNumber, showExplosion, showHitImpact, updateCombatVisuals } from './combat.js';
@@ -45,6 +45,9 @@ let predDashTimer = 0, predDashDirX = 0, predDashDirZ = 0;
 const DASH_SPEED = 30;
 const DASH_DURATION = 250;
 let currentArenaRadius = 40;
+let predVelX = 0, predVelZ = 0;
+let prevInputDx = 0, prevInputDz = 0;
+let speedTrailCounter = 0;
 
 if (isMobile()) setupMobileControls();
 
@@ -122,22 +125,50 @@ function gameLoop() {
           }
           predDashDirX = ddx; predDashDirZ = ddz;
           predDashTimer = DASH_DURATION;
+          spawnDustPuff(predictedX, predictedZ);
         }
 
         if (predDashTimer > 0) {
           predDashTimer -= dtMs;
           predictedX += predDashDirX * DASH_SPEED * dt;
           predictedZ += predDashDirZ * DASH_SPEED * dt;
-        } else if (input.dx !== 0 || input.dz !== 0) {
+        } else {
           const speed = (me.buffs && me.buffs.includes('speed')) ? PREDICTED_SPEED * 1.5 : PREDICTED_SPEED;
-          predictedX += input.dx * speed * dt;
-          predictedZ += input.dz * speed * dt;
+          if (input.dx !== 0 || input.dz !== 0) {
+            predVelX = input.dx * speed;
+            predVelZ = input.dz * speed;
+          } else {
+            predVelX *= Math.exp(-20 * dt);
+            predVelZ *= Math.exp(-20 * dt);
+            if (Math.abs(predVelX) < 0.1) predVelX = 0;
+            if (Math.abs(predVelZ) < 0.1) predVelZ = 0;
+          }
+          predictedX += predVelX * dt;
+          predictedZ += predVelZ * dt;
         }
         const pDist = Math.sqrt(predictedX * predictedX + predictedZ * predictedZ);
         if (pDist > currentArenaRadius - 1) {
           const s = (currentArenaRadius - 1) / pDist;
           predictedX *= s;
           predictedZ *= s;
+        }
+
+        // Direction change dust puff
+        if ((input.dx !== 0 || input.dz !== 0) &&
+            (Math.sign(input.dx) !== Math.sign(prevInputDx) && prevInputDx !== 0 ||
+             Math.sign(input.dz) !== Math.sign(prevInputDz) && prevInputDz !== 0)) {
+          spawnDustPuff(predictedX, predictedZ);
+        }
+        prevInputDx = input.dx;
+        prevInputDz = input.dz;
+
+        // Speed trail when buffed or dashing
+        const hasSpeedBuff = me.buffs && me.buffs.includes('speed');
+        if (predDashTimer > 0) {
+          spawnSpeedTrail(predictedX, predictedZ, 0x44ddff);
+        } else if (hasSpeedBuff && (input.dx !== 0 || input.dz !== 0)) {
+          speedTrailCounter++;
+          if (speedTrailCounter % 3 === 0) spawnSpeedTrail(predictedX, predictedZ, 0xffff44);
         }
 
         // Gun shot visual

@@ -81,6 +81,33 @@ export function spawnBloodDrops(x, z) {
   }
 }
 
+export function spawnDustPuff(x, z) {
+  const dustGeo = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+  for (let i = 0; i < 5 && particles.length < MAX_PARTICLES; i++) {
+    const mat = new THREE.MeshBasicMaterial({ color: 0x997755, transparent: true });
+    const mesh = new THREE.Mesh(dustGeo, mat);
+    mesh.position.set(x + (Math.random() - 0.5) * 0.5, 0.2, z + (Math.random() - 0.5) * 0.5);
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 1 + Math.random() * 1.5;
+    scene.add(mesh);
+    particles.push({
+      mesh, mat,
+      vx: Math.cos(angle) * speed, vy: 0.5 + Math.random(), vz: Math.sin(angle) * speed,
+      life: 0.25, decay: 4, isSpark: true,
+    });
+  }
+}
+
+export function spawnSpeedTrail(x, z, color) {
+  if (particles.length >= MAX_PARTICLES) return;
+  const trailGeo = new THREE.BoxGeometry(0.15, 0.05, 0.15);
+  const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.6 });
+  const mesh = new THREE.Mesh(trailGeo, mat);
+  mesh.position.set(x, 0.3, z);
+  scene.add(mesh);
+  particles.push({ mesh, mat, vx: 0, vy: 0, vz: 0, life: 0.3, decay: 3.3, isSpark: true });
+}
+
 export function spawnAoeRing(x, z, radius, color) {
   const ringGeo = new THREE.TorusGeometry(0.5, 0.12, 8, 32);
   const mat = new THREE.MeshBasicMaterial({ color, transparent: true });
