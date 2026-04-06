@@ -15,10 +15,12 @@ const COMBO_NAMES = { 5: 'RAMPAGE', 10: 'KILLING SPREE', 15: 'DOMINATING', 20: '
 
 export function showTitle() {
   title.style.display = 'block'; hud.style.display = 'none'; gameover.style.display = 'none';
+  hideAbilities(); hideInfo(); hidePlayers();
 }
 
 export function showHUD() {
   title.style.display = 'none'; hud.style.display = 'block'; gameover.style.display = 'none'; pingEl.style.display = 'block';
+  showAbilities(); showInfo();
 }
 
 export function showGameOver(wave, score, kills) {
@@ -27,6 +29,7 @@ export function showGameOver(wave, score, kills) {
   goScore.textContent = 'SCORE: ' + score;
   const killLines = Object.entries(kills).map(([id, k]) => id + ': ' + k).join(' | ');
   goKills.textContent = 'KILLS: ' + killLines;
+  hideAbilities(); hideInfo(); hidePlayers();
 }
 
 export function updateHUD(wave, score, hp, maxHp) {
@@ -67,6 +70,9 @@ const ammoFill = document.getElementById('ammo-fill');
 const ammoText = document.getElementById('ammo-text');
 const controlsEl = document.getElementById('hud-controls');
 const countdownEl = document.getElementById('hud-countdown');
+const abilitiesEl = document.getElementById('hud-abilities');
+const infoEl = document.getElementById('hud-info');
+const playersEl = document.getElementById('hud-players');
 
 const UPGRADE_NAMES = {
   fire_rate: 'RAPID', bullet_size: 'BIG RND', pierce: 'PIERCE', crit_chance: 'PRECISION',
@@ -112,5 +118,42 @@ export function updateCountdown(phase, timerMs) {
     countdownEl.style.display = 'block';
   } else {
     countdownEl.style.display = 'none';
+  }
+}
+
+// Abilities panel (right side)
+function showAbilities() { if (abilitiesEl) abilitiesEl.style.display = 'block'; }
+function hideAbilities() { if (abilitiesEl) abilitiesEl.style.display = 'none'; }
+
+export function updateAbilities(wallCharges, specialCd, dashCd) {
+  if (!abilitiesEl) return;
+  const wallColor = wallCharges > 0 ? '#e6993a' : '#ff4444';
+  const specialReady = specialCd <= 0;
+  const dashReady = dashCd <= 0;
+  abilitiesEl.innerHTML =
+    '<div class="ab-row"><span class="ab-key">[E]</span> WALL <span class="ab-val" style="color:' + wallColor + '">' + wallCharges + '/3</span></div>' +
+    '<div class="ab-row"><span class="ab-key">[RMB]</span> AoE ' + (specialReady ? '<span class="ab-val">READY</span>' : '<span class="ab-cd">' + Math.ceil(specialCd / 1000) + 's</span>') + '</div>' +
+    '<div class="ab-row"><span class="ab-key">[SHIFT]</span> DASH ' + (dashReady ? '<span class="ab-val">READY</span>' : '<span class="ab-cd">' + ((dashCd / 1000).toFixed(1)) + 's</span>') + '</div>';
+}
+
+// Info panel (left side)
+function showInfo() { if (infoEl) infoEl.style.display = 'block'; }
+function hideInfo() { if (infoEl) infoEl.style.display = 'none'; }
+
+export function updateInfo(kills) {
+  if (!infoEl) return;
+  infoEl.innerHTML = '<div class="info-row">KILLS: <span style="color:#fff">' + kills + '</span></div>';
+}
+
+// Player count
+function hidePlayers() { if (playersEl) playersEl.style.display = 'none'; }
+
+export function updatePlayers(count) {
+  if (!playersEl) return;
+  if (count > 1) {
+    playersEl.style.display = 'block';
+    playersEl.textContent = count + ' PLAYERS IN DOME';
+  } else {
+    playersEl.style.display = 'none';
   }
 }

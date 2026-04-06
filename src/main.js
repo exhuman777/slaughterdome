@@ -10,7 +10,7 @@ import { showGunShot, showSpecialAttack, showDamageNumber, showExplosion, showHi
 import { playHit, playKill, playExplosion, playWaveStart, playBossSpawn, playPickup, playDeath, playCombo, resumeAudio, playShot } from './audio.js';
 import { getInput, getMobileInput, isMobile, setupMobileControls } from './input.js';
 import { connect, sendInput, sendPing, getState, getMyId, getPing, drainEvents } from './network.js';
-import { showTitle, showHUD, showGameOver, updateHUD, showCombo, updatePing, getPlayerName, updateUpgradeDisplay, updateWeaponHUD, showControlsHint, hideControlsHint, updateCountdown } from './ui.js';
+import { showTitle, showHUD, showGameOver, updateHUD, showCombo, updatePing, getPlayerName, updateUpgradeDisplay, updateWeaponHUD, showControlsHint, hideControlsHint, updateCountdown, updateAbilities, updateInfo, updatePlayers } from './ui.js';
 import { showUpgradeShop, hideUpgradeShop } from './upgrades.js';
 
 initRenderer();
@@ -38,6 +38,12 @@ const knownWalls = new Map();
 const wallGeo = new THREE.BoxGeometry(4, 2.5, 0.5);
 const wallMat = new THREE.MeshStandardMaterial({ color: 0x888899, roughness: 0.5, metalness: 0.3 });
 
+// Wall placement preview ghost
+const ghostWallMat = new THREE.MeshBasicMaterial({ color: 0x4488aa, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
+const ghostWall = new THREE.Mesh(wallGeo.clone(), ghostWallMat);
+ghostWall.visible = false;
+ghostWall.position.y = 1.25;
+
 // Client-side prediction
 const PREDICTED_SPEED = 10;
 let predictedX = 0, predictedZ = 0;
@@ -49,6 +55,9 @@ let currentArenaRadius = 40;
 let predVelX = 0, predVelZ = 0;
 let prevInputDx = 0, prevInputDz = 0;
 let speedTrailCounter = 0;
+
+// Track server overheated state for visual sync
+let serverOverheated = false;
 
 if (isMobile()) setupMobileControls();
 
@@ -70,7 +79,9 @@ async function startGame() {
     removeAllEnemies();
     hasPrediction = false;
     predDashTimer = 0;
+    serverOverheated = false;
     markLocalPlayer(getMyId());
+    scene.add(ghostWall);
   } catch (err) {
     console.error('Connection failed:', err);
   }
@@ -115,6 +126,9 @@ function gameLoop() {
           predictedZ = me.pos[2];
           hasPrediction = true;
         }
+
+        // Track server overheat state
+        serverOverheated = !!me.overheated;
 
         // Dash prediction
         if (input.dash && !predDashTimer) {
@@ -174,13 +188,14 @@ function gameLoop() {
           if (speedTrailCounter % 3 === 0) spawnSpeedTrail(predictedX, predictedZ, 0xffff44);
         }
 
-        // Gun shot visual
+        // Gun shot visual - sync with server overheat state
         const px = predictedX;
         const pz = predictedZ;
         if (input.attack) {
           const weaponType = me.weapon || 'pistol';
           const wepCooldowns = { pistol: 150, shotgun: 400, railgun: 400, flamethrower: 80 };
-          const cooldown = wepCooldowns[weaponType] || 150;
+          let cooldown = wepCooldowns[weaponType] || 150;
+          if (serverOverheated) cooldown *= 3; // Match server OVERHEAT.slowMult
           if (now - lastAttackTime > cooldown) {
             lastAttackTime = now;
             const angle = Math.atan2(input.aimZ - pz, input.aimX - px);
@@ -194,6 +209,23 @@ function gameLoop() {
           showSpecialAttack(px, pz);
           spawnNeonPop(px, pz, 0xffaa00, 5);
         }
+
+        // Wall placement preview ghost
+        const wallCharges = me.wallCharges !== undefined ? me.wallCharges : 3;
+        if (wallCharges > 0) {
+          const aimAngle = Math.atan2(input.aimZ - pz, input.aimX - px);
+          const aimDist = Math.sqrt((input.aimX - px) ** 2 + (input.aimZ - pz) ** 2);
+          const placeDist = Math.min(aimDist, 8);
+          const wx = px + Math.cos(aimAngle) * placeDist;
+          const wz = pz + Math.sin(aimAngle) * placeDist;
+          ghostWall.position.set(wx, 1.25, wz);
+          ghostWall.rotation.y = aimAngle + Math.PI / 2;
+          ghostWall.visible = true;
+        } else {
+          ghostWall.visible = false;
+        }
+      } else {
+        ghostWall.visible = false;
       }
     }
 
@@ -335,15 +367,18 @@ function processState(state, dt) {
   }
 
   const me = state.players.find(p => p.id === myId);
-  if (me) updateHUD(state.wave, state.score, me.hp, me.maxHp);
-  if (me) updateUpgradeDisplay(me.upgrades);
   if (me) {
+    updateHUD(state.wave, state.score, me.hp, me.maxHp);
+    updateUpgradeDisplay(me.upgrades);
     const dashPct = me.dashCooldown > 0 ? Math.max(0, 1 - me.dashCooldown / 2000) * 100 : 100;
     const dashFill = document.getElementById('dash-fill');
     if (dashFill) dashFill.style.width = dashPct + '%';
     updateWeaponHUD(me.weapon, me.overheated, me.heatPct || 0);
+    updateAbilities(me.wallCharges !== undefined ? me.wallCharges : 3, me.specialCd || 0, me.dashCooldown || 0);
+    updateInfo(me.kills || 0);
   }
   updateCountdown(state.phase, state.waveTimer);
+  updatePlayers(state.playerCount || 1);
 
   setBiome(state.wave);
   showCombo(state.combo);
@@ -412,6 +447,7 @@ function handleEvent(ev) {
       hasPrediction = false;
       hideUpgradeShop();
       hideControlsHint();
+      ghostWall.visible = false;
       showGameOver(ev.wave, ev.score, ev.kills);
       playDeath();
       break;

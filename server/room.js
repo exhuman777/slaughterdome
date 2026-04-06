@@ -86,6 +86,9 @@ export class Room {
         heatPct: p.overheated
           ? p.overheatCooldown / OVERHEAT.slowMs
           : p.heatTimer / OVERHEAT.fastMs,
+        wallCharges: p.wallCharges,
+        specialCd: Math.max(0, p.specialCooldown),
+        kills: p.kills,
       });
     }
     const enemies = [];
@@ -113,6 +116,7 @@ export class Room {
       players, enemies, pickups, projectiles, walls,
       wave: this.wave, score: this.score, combo: this.combo, phase: this.state,
       arenaRadius: this.arenaRadius, waveTimer: this.waveTimer,
+      playerCount: this.playerCount,
     };
   }
 }
