@@ -4,6 +4,7 @@ import {
   WAVE_REST_MS, SCALING, ENEMY_DEFS, WALL, DASH,
   ARENA_SHRINK_PER_WAVE, ARENA_MIN_RADIUS, ARENA_OUTSIDE_DPS,
   waveEnemyCount, enemyTypesForWave, scaleStat,
+  UPGRADE_DEFS, UPGRADE_TIER_WEIGHTS, WEAPONS,
 } from './config.js';
 
 let nextEnemyId = 1;
@@ -38,6 +39,12 @@ function tickRoom(room) {
   if (room.state === 'countdown') {
     room.waveTimer -= TICK_MS;
     if (room.waveTimer <= 0) {
+      for (const [, p] of room.players) {
+        if (p.pendingUpgrades && p.pendingUpgrades.length > 0) {
+          applyUpgrade(p, p.pendingUpgrades[0].key);
+          p.pendingUpgrades = null;
+        }
+      }
       room.wave++;
       spawnWave(room);
       room.state = 'combat';
@@ -490,6 +497,13 @@ function checkWaveClear(room) {
       room.broadcast({ t: 'respawn', pid: p.id, hp: p.hp });
     }
   }
+  const comboTier = getComboTier(room.combo);
+  const tierNum = comboTier ? COMBO_TIERS.indexOf(comboTier) : 0;
+  for (const [, p] of room.players) {
+    const options = generateUpgrades(tierNum);
+    p.pendingUpgrades = options;
+    room.sendTo(p.id, { t: 'upgrades', options });
+  }
   room.state = 'countdown';
   room.waveTimer = WAVE_REST_MS;
 }
@@ -501,5 +515,43 @@ function checkGameOver(room) {
     const kills = {};
     for (const [, p] of room.players) kills[p.id] = p.kills;
     room.broadcast({ t: 'gameover', wave: room.wave, score: room.score, kills });
+  }
+}
+
+function generateUpgrades(comboTier) {
+  const keys = Object.keys(UPGRADE_DEFS);
+  const weights = {};
+  for (const key of keys) {
+    const tier = UPGRADE_DEFS[key].tier;
+    const w = UPGRADE_TIER_WEIGHTS[tier];
+    weights[key] = Math.max(0.01, w.base + w.perComboTier * comboTier);
+  }
+  const chosen = [];
+  const available = [...keys];
+  for (let i = 0; i < 3 && available.length > 0; i++) {
+    const totalWeight = available.reduce((sum, k) => sum + weights[k], 0);
+    let roll = Math.random() * totalWeight;
+    let pick = available[0];
+    for (const k of available) {
+      roll -= weights[k];
+      if (roll <= 0) { pick = k; break; }
+    }
+    chosen.push(pick);
+    available.splice(available.indexOf(pick), 1);
+  }
+  return chosen.map(key => ({ key, ...UPGRADE_DEFS[key] }));
+}
+
+export function applyUpgrade(player, upgradeKey) {
+  const def = UPGRADE_DEFS[upgradeKey];
+  if (!def) return;
+  if (def.category === 'weapon_swap') {
+    player.weapon = upgradeKey;
+  } else {
+    player.upgrades[upgradeKey] = (player.upgrades[upgradeKey] || 0) + 1;
+  }
+  if (upgradeKey === 'max_hp') {
+    player.maxHp = PLAYER.hp + (player.upgrades.max_hp || 0) * 20;
+    player.hp = Math.min(player.hp + 20, player.maxHp);
   }
 }

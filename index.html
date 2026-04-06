@@ -28,6 +28,14 @@
   #gameover .stats { font-size: 18px; margin: 10px 0; }
   #gameover button { background: #ff4444; color: #fff; border: none; padding: 12px 48px; font-size: 20px; font-family: inherit; cursor: pointer; margin-top: 20px; letter-spacing: 4px; }
   #ping { position: absolute; top: 10px; right: 10px; color: #666; font-size: 12px; display: none; }
+  #upgrade-shop { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); display:flex; gap:16px; z-index:50; }
+  .upgrade-card { background:#1a1a1a; border:2px solid #888; border-radius:4px; padding:16px 20px; width:180px; cursor:pointer; text-align:center; font-family:'Courier New',monospace; transition:transform 0.1s,border-color 0.1s; }
+  .upgrade-card:hover { transform:scale(1.05); border-color:#fff; }
+  .upgrade-tier { font-size:10px; letter-spacing:2px; margin-bottom:6px; }
+  .upgrade-name { color:#fff; font-size:16px; font-weight:bold; margin-bottom:8px; }
+  .upgrade-desc { color:#aaa; font-size:12px; margin-bottom:10px; }
+  .upgrade-key { color:#555; font-size:11px; }
+  #upgrade-strip { position:absolute; bottom:38px; left:50%; transform:translateX(-50%); color:#e6993a; font-size:11px; font-family:'Courier New',monospace; letter-spacing:1px; text-align:center; }
 </style>
 </head>
 <body>
@@ -55,6 +63,8 @@
     <button id="restart-btn">PLAY AGAIN</button>
   </div>
   <div id="ping"></div>
+  <div id="upgrade-shop" style="display:none;"></div>
+  <div id="upgrade-strip"></div>
 </div>
 <div id="flash-overlay" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:999;opacity:0;"></div>
 <script>

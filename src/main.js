@@ -10,7 +10,8 @@ import { showGunShot, showSpecialAttack, showDamageNumber, showExplosion, showHi
 import { playHit, playKill, playExplosion, playWaveStart, playBossSpawn, playPickup, playDeath, playCombo, resumeAudio } from './audio.js';
 import { getInput, getMobileInput, isMobile, setupMobileControls } from './input.js';
 import { connect, sendInput, sendPing, getState, getMyId, getPing, drainEvents } from './network.js';
-import { showTitle, showHUD, showGameOver, updateHUD, showCombo, updatePing, getPlayerName } from './ui.js';
+import { showTitle, showHUD, showGameOver, updateHUD, showCombo, updatePing, getPlayerName, updateUpgradeDisplay } from './ui.js';
+import { showUpgradeShop, hideUpgradeShop } from './upgrades.js';
 
 initRenderer();
 createArena();
@@ -56,6 +57,7 @@ document.getElementById('restart-btn').addEventListener('click', startGame);
 
 async function startGame() {
   resumeAudio();
+  hideUpgradeShop();
   const name = getPlayerName();
   try {
     await connect(name);
@@ -327,6 +329,7 @@ function processState(state, dt) {
 
   const me = state.players.find(p => p.id === myId);
   if (me) updateHUD(state.wave, state.score, me.hp, me.maxHp);
+  if (me) updateUpgradeDisplay(me.upgrades);
   if (me) {
     const dashPct = me.dashCooldown > 0 ? Math.max(0, 1 - me.dashCooldown / 2000) * 100 : 100;
     const dashFill = document.getElementById('dash-fill');
@@ -363,7 +366,11 @@ function handleEvent(ev) {
       flashEnemy(ev.target);
       break;
     }
+    case 'upgrades':
+      showUpgradeShop(ev.options);
+      break;
     case 'wave': {
+      hideUpgradeShop();
       playWaveStart();
       const wMe = getState()?.players?.find(p => p.id === getMyId());
       if (wMe) spawnNeonPop(wMe.pos[0], wMe.pos[2], 0x4488ff, 6);
@@ -394,6 +401,7 @@ function handleEvent(ev) {
     case 'gameover':
       gameActive = false;
       hasPrediction = false;
+      hideUpgradeShop();
       showGameOver(ev.wave, ev.score, ev.kills);
       playDeath();
       break;

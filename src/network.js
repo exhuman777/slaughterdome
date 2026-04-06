@@ -59,6 +59,11 @@ export function getMyId() { return myId; }
 export function getPing() { return pingMs; }
 export function isConnected() { return connected; }
 
+export function sendUpgradePick(index) {
+  if (!connected || !ws) return;
+  ws.send(JSON.stringify({ t: 'pick_upgrade', index }));
+}
+
 export function drainEvents() {
   const events = eventQueue;
   eventQueue = [];

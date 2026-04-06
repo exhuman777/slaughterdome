@@ -1,7 +1,7 @@
 import { WebSocketServer } from 'ws';
 import http from 'http';
 import { RoomManager } from './room.js';
-import { startGameLoop } from './game.js';
+import { startGameLoop, applyUpgrade } from './game.js';
 
 const PORT = process.env.PORT || 3001;
 const roomManager = new RoomManager();
@@ -47,6 +47,14 @@ wss.on('connection', (ws) => {
 
     if (msg.t === 'ping') {
       ws.send(JSON.stringify({ t: 'pong', ts: msg.ts, serverTime: Date.now() }));
+    }
+
+    if (msg.t === 'pick_upgrade' && player) {
+      const idx = Number(msg.index);
+      if (player.pendingUpgrades && idx >= 0 && idx < player.pendingUpgrades.length) {
+        applyUpgrade(player, player.pendingUpgrades[idx].key);
+        player.pendingUpgrades = null;
+      }
     }
   });
 

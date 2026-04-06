@@ -59,3 +59,15 @@ export function getPlayerName() {
   return document.getElementById('name-input').value.trim().slice(0, 12) ||
     'Warrior_' + Math.floor(Math.random() * 9000 + 1000);
 }
+
+const upgradeStrip = document.getElementById('upgrade-strip');
+
+export function updateUpgradeDisplay(upgrades) {
+  if (!upgradeStrip || !upgrades) return;
+  const parts = [];
+  for (const [key, count] of Object.entries(upgrades)) {
+    const short = key.slice(0, 4).toUpperCase();
+    parts.push(short + '+' + count);
+  }
+  upgradeStrip.textContent = parts.join(' ');
+}

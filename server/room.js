@@ -39,6 +39,7 @@ export class Room {
       shootCooldown: 0, specialCooldown: 0,
       wallCharges: WALL.charges, wallPlaceCooldown: 0, wallRechargeTimer: 0,
       dashTimer: 0, dashCooldown: 0, dashDirX: 0, dashDirZ: 0, dashIframes: 0,
+      upgrades: {}, weapon: 'pistol', pendingUpgrades: null,
     };
     this.players.set(id, player);
     if (this.cleanupTimer) { clearTimeout(this.cleanupTimer); this.cleanupTimer = null; }
@@ -78,6 +79,8 @@ export class Room {
         buffs: Object.keys(p.buffs).filter(b => p.buffs[b] > 0),
         dashing: p.dashTimer > 0,
         dashCooldown: p.dashCooldown,
+        upgrades: p.upgrades,
+        weapon: p.weapon,
       });
     }
     const enemies = [];
