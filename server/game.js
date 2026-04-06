@@ -115,7 +115,6 @@ function updatePlayers(room, dt) {
       }
     }
     if (p.input.attack && p.shootCooldown <= 0) {
-      p.shootCooldown = PLAYER.shootCooldown;
       const aimAngle = Math.atan2(p.input.aimZ - p.z, p.input.aimX - p.x);
       playerShoot(room, p, aimAngle);
     }
@@ -163,10 +162,24 @@ function updatePlayers(room, dt) {
 }
 
 function playerShoot(room, player, aimAngle) {
-  const speed = PLAYER.bulletSpeed;
-  const vx = Math.cos(aimAngle) * speed;
-  const vz = Math.sin(aimAngle) * speed;
-  spawnProjectile(room, player.x + Math.cos(aimAngle) * 0.8, player.z + Math.sin(aimAngle) * 0.8, vx, vz, 'bullet', pDamage(player), player.id);
+  const wep = WEAPONS[player.weapon || 'pistol'];
+  const cooldown = Math.max(50, wep.cooldown * Math.pow(0.85, player.upgrades.fire_rate || 0));
+  player.shootCooldown = cooldown;
+  const baseDmg = pDamage(player);
+  const dmg = Math.floor(baseDmg * wep.damageMult);
+  const pierceCount = wep.pierce + (player.upgrades.pierce || 0);
+  for (let i = 0; i < wep.bullets; i++) {
+    const spreadAngle = aimAngle + (i - (wep.bullets - 1) / 2) * wep.spread;
+    const vx = Math.cos(spreadAngle) * wep.speed;
+    const vz = Math.sin(spreadAngle) * wep.speed;
+    const sx = player.x + Math.cos(spreadAngle) * 0.8;
+    const sz = player.z + Math.sin(spreadAngle) * 0.8;
+    const id = 'pr' + nextProjectileId++;
+    room.projectiles.set(id, {
+      id, x: sx, z: sz, vx, vz, type: 'bullet', damage: dmg,
+      age: 0, owner: player.id, pierce: pierceCount, maxAge: wep.range, hitSet: new Set(),
+    });
+  }
 }
 
 function specialAttack(room, player) {
@@ -386,20 +399,28 @@ function nearestPlayer(entity, players) {
 function updateProjectiles(room, dt) {
   for (const [id, pr] of room.projectiles) {
     pr.x += pr.vx * dt; pr.z += pr.vz * dt; pr.age += TICK_MS;
-    if (pr.age > 3000 || Math.sqrt(pr.x * pr.x + pr.z * pr.z) > ARENA_RADIUS + 5) {
+    if (pr.age > (pr.maxAge || 3000) || Math.sqrt(pr.x * pr.x + pr.z * pr.z) > ARENA_RADIUS + 5) {
       room.projectiles.delete(id); continue;
     }
     if (pr.type === 'bullet') {
+      const hitRadius = 1.2 * (1 + 0.3 * ((pr.owner && room.players.get(pr.owner)?.upgrades?.bullet_size) || 0));
       for (const [, e] of room.enemies) {
+        if (pr.hitSet && pr.hitSet.has(e.id)) continue;
         const dx = e.x - pr.x; const dz = e.z - pr.z;
-        if (dx * dx + dz * dz < 1.2) {
+        if (dx * dx + dz * dz < hitRadius * hitRadius) {
           const player = room.players.get(pr.owner);
           if (player) {
-            const crit = Math.random() < PLAYER.critChance;
-            const dmg = Math.floor(pr.damage * (crit ? PLAYER.critMultiplier : 1));
+            const crit = Math.random() < (PLAYER.critChance + (player.upgrades.crit_chance || 0) * 0.05);
+            const critMult = PLAYER.critMultiplier + (player.upgrades.crit_damage || 0) * 0.5;
+            const dmg = Math.floor(pr.damage * (crit ? critMult : 1));
             damageEnemy(room, e, dmg, player, crit);
           }
-          room.projectiles.delete(id); break;
+          if (pr.pierce > 0) {
+            pr.pierce--;
+            if (pr.hitSet) pr.hitSet.add(e.id);
+          } else {
+            room.projectiles.delete(id); break;
+          }
         }
       }
     } else {
