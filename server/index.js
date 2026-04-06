@@ -42,6 +42,7 @@ wss.on('connection', (ws) => {
       player.input.aimX = Number(msg.aim?.[0]) || 0;
       player.input.aimZ = Number(msg.aim?.[2]) || 0;
       player.input.wall = !!msg.w;
+      player.input.dash = !!msg.dash;
     }
 
     if (msg.t === 'ping') {

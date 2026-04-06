@@ -4,6 +4,7 @@ import * as THREE from 'https://esm.sh/three@0.162.0';
 const keys = {};
 const mouse = { x: 0, z: 0, left: false, right: false };
 let wallTriggered = false;
+let dashTriggered = false;
 const raycaster = new THREE.Raycaster();
 const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 const mouseNDC = new THREE.Vector2();
@@ -12,6 +13,7 @@ const intersection = new THREE.Vector3();
 document.addEventListener('keydown', e => {
   keys[e.code] = true;
   if (e.code === 'KeyE') wallTriggered = true;
+  if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') dashTriggered = true;
 });
 document.addEventListener('keyup', e => { keys[e.code] = false; });
 document.addEventListener('mousemove', e => {
@@ -41,9 +43,11 @@ export function getInput() {
   if (keys['KeyD'] || keys['ArrowRight']) dx += 1;
   const len = Math.sqrt(dx * dx + dz * dz);
   if (len > 0) { dx /= len; dz /= len; }
+  const dash = dashTriggered;
+  dashTriggered = false;
   const wall = wallTriggered;
   wallTriggered = false;
-  return { dx, dz, attack: mouse.left, special: mouse.right || keys['Space'], aimX: mouse.x, aimZ: mouse.z, wall };
+  return { dx, dz, attack: mouse.left, special: mouse.right || keys['Space'], aimX: mouse.x, aimZ: mouse.z, wall, dash };
 }
 
 let touchMove = { dx: 0, dz: 0 };
@@ -96,5 +100,5 @@ export function setupMobileControls() {
 }
 
 export function getMobileInput() {
-  return { dx: touchMove.dx, dz: touchMove.dz, attack: touchAttack, special: touchSpecial, aimX: 0, aimZ: 0 };
+  return { dx: touchMove.dx, dz: touchMove.dz, attack: touchAttack, special: touchSpecial, aimX: 0, aimZ: 0, dash: false };
 }
