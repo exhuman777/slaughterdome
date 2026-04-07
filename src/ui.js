@@ -83,6 +83,7 @@ const countdownEl = document.getElementById('hud-countdown');
 const abilitiesEl = document.getElementById('hud-abilities');
 const infoEl = document.getElementById('hud-info');
 const playersEl = document.getElementById('hud-players');
+const wallModeEl = document.getElementById('hud-wallmode');
 
 const UPGRADE_NAMES = {
   fire_rate: 'RAPID', bullet_size: 'BIG RND', pierce: 'PIERCE', crit_chance: 'PRECISION',
@@ -146,9 +147,14 @@ export function updateAbilities(wallCharges, specialCd, dashCd) {
   const specialReady = specialCd <= 0;
   const dashReady = dashCd <= 0;
   abilitiesEl.innerHTML =
-    '<div class="ab-row"><span class="ab-key">[E]</span> WALL <span class="ab-val" style="color:' + wallColor + '">' + wallCharges + '/3</span></div>' +
+    '<div class="ab-row"><span class="ab-key">[E]</span> WALL <span class="ab-val" style="color:' + wallColor + '">' + wallCharges + '/8</span></div>' +
     '<div class="ab-row"><span class="ab-key">[RMB]</span> AoE ' + (specialReady ? '<span class="ab-val">READY</span>' : '<span class="ab-cd">' + Math.ceil(specialCd / 1000) + 's</span>') + '</div>' +
     '<div class="ab-row"><span class="ab-key">[SHIFT]</span> DASH ' + (dashReady ? '<span class="ab-val">READY</span>' : '<span class="ab-cd">' + ((dashCd / 1000).toFixed(1)) + 's</span>') + '</div>';
+}
+
+export function updateWallMode(active) {
+  if (!wallModeEl) return;
+  wallModeEl.style.display = active ? 'block' : 'none';
 }
 
 // Info panel (left side)

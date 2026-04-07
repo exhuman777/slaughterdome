@@ -5,6 +5,7 @@ const keys = {};
 const mouse = { x: 0, z: 0, left: false, right: false };
 let wallTriggered = false;
 let dashTriggered = false;
+let wallMode = false;
 const raycaster = new THREE.Raycaster();
 const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 const mouseNDC = new THREE.Vector2();
@@ -12,8 +13,11 @@ const intersection = new THREE.Vector3();
 
 document.addEventListener('keydown', e => {
   keys[e.code] = true;
-  if (e.code === 'KeyE') wallTriggered = true;
+  if (e.code === 'KeyE') {
+    wallMode = !wallMode;
+  }
   if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') dashTriggered = true;
+  if (e.code === 'Escape') wallMode = false;
 });
 document.addEventListener('keyup', e => { keys[e.code] = false; });
 document.addEventListener('mousemove', e => {
@@ -26,14 +30,23 @@ document.addEventListener('mousemove', e => {
   }
 });
 document.addEventListener('mousedown', e => {
-  if (e.button === 0) mouse.left = true;
-  if (e.button === 2) mouse.right = true;
+  if (e.button === 0) {
+    mouse.left = true;
+    if (wallMode) wallTriggered = true;
+  }
+  if (e.button === 2) {
+    mouse.right = true;
+    if (wallMode) wallMode = false;
+  }
 });
 document.addEventListener('mouseup', e => {
   if (e.button === 0) mouse.left = false;
   if (e.button === 2) mouse.right = false;
 });
 document.addEventListener('contextmenu', e => e.preventDefault());
+
+export function isWallMode() { return wallMode; }
+export function exitWallMode() { wallMode = false; }
 
 export function getInput() {
   let dx = 0, dz = 0;
@@ -47,7 +60,9 @@ export function getInput() {
   dashTriggered = false;
   const wall = wallTriggered;
   wallTriggered = false;
-  return { dx, dz, attack: mouse.left, special: mouse.right || keys['Space'], aimX: mouse.x, aimZ: mouse.z, wall, dash };
+  // In wall mode, suppress attack -- LMB places walls instead
+  const attack = wallMode ? false : mouse.left;
+  return { dx, dz, attack, special: mouse.right || keys['Space'], aimX: mouse.x, aimZ: mouse.z, wall, dash };
 }
 
 let touchMove = { dx: 0, dz: 0 };

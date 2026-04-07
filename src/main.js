@@ -8,9 +8,9 @@ import * as THREE from 'https://esm.sh/three@0.162.0';
 import { scene } from './renderer.js';
 import { showGunShot, showSpecialAttack, showDamageNumber, showExplosion, showHitImpact, updateCombatVisuals } from './combat.js';
 import { playHit, playKill, playExplosion, playWaveStart, playBossSpawn, playPickup, playDeath, playCombo, resumeAudio, playShot } from './audio.js';
-import { getInput, getMobileInput, isMobile, setupMobileControls } from './input.js';
+import { getInput, getMobileInput, isMobile, setupMobileControls, isWallMode, exitWallMode } from './input.js';
 import { connect, sendInput, sendPing, getState, getMyId, getPing, drainEvents } from './network.js';
-import { showTitle, showHUD, showGameOver, updateHUD, showCombo, updatePing, getPlayerName, updateUpgradeDisplay, updateWeaponHUD, showControlsHint, hideControlsHint, updateCountdown, updateAbilities, updateInfo, updatePlayers, showYouDied, hideYouDied } from './ui.js';
+import { showTitle, showHUD, showGameOver, updateHUD, showCombo, updatePing, getPlayerName, updateUpgradeDisplay, updateWeaponHUD, showControlsHint, hideControlsHint, updateCountdown, updateAbilities, updateInfo, updatePlayers, showYouDied, hideYouDied, updateWallMode } from './ui.js';
 import { showUpgradeShop, hideUpgradeShop } from './upgrades.js';
 
 initRenderer();
@@ -39,7 +39,7 @@ const wallGeo = new THREE.BoxGeometry(4, 2.5, 0.5);
 const wallMat = new THREE.MeshStandardMaterial({ color: 0x888899, roughness: 0.5, metalness: 0.3 });
 
 // Wall placement preview ghost
-const ghostWallMat = new THREE.MeshBasicMaterial({ color: 0x4488aa, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
+const ghostWallMat = new THREE.MeshBasicMaterial({ color: 0x4488aa, transparent: true, opacity: 0.5, side: THREE.DoubleSide });
 const ghostWall = new THREE.Mesh(wallGeo.clone(), ghostWallMat);
 ghostWall.visible = false;
 ghostWall.position.y = 1.25;
@@ -198,9 +198,11 @@ function gameLoop() {
           showSpecialAttack(px, pz);
         }
 
-        // Wall placement preview ghost
-        const wallCharges = me.wallCharges !== undefined ? me.wallCharges : 3;
-        if (wallCharges > 0) {
+        // Wall placement preview ghost -- only in wall mode
+        const wallCharges = me.wallCharges !== undefined ? me.wallCharges : 8;
+        const inWallMode = isWallMode();
+        updateWallMode(inWallMode);
+        if (inWallMode && wallCharges > 0) {
           const aimAngle = Math.atan2(input.aimZ - pz, input.aimX - px);
           const aimDist = Math.sqrt((input.aimX - px) ** 2 + (input.aimZ - pz) ** 2);
           const placeDist = Math.min(aimDist, 8);
@@ -357,7 +359,7 @@ function processState(state, dt) {
     const dashFill = document.getElementById('dash-fill');
     if (dashFill) dashFill.style.width = dashPct + '%';
     updateWeaponHUD(me.weapon, me.overheated, me.heatPct || 0);
-    updateAbilities(me.wallCharges !== undefined ? me.wallCharges : 3, me.specialCd || 0, me.dashCooldown || 0);
+    updateAbilities(me.wallCharges !== undefined ? me.wallCharges : 8, me.specialCd || 0, me.dashCooldown || 0);
     updateInfo(me.kills || 0);
     // Show YOU DIED when player dies but game continues
     if (!me.alive && wasAlive) {
@@ -422,6 +424,8 @@ function handleEvent(ev) {
       hideUpgradeShop();
       hideControlsHint();
       hideYouDied();
+      exitWallMode();
+      updateWallMode(false);
       ghostWall.visible = false;
       showGameOver(ev.wave, ev.score, ev.players || ev.kills);
       playDeath();

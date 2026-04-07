@@ -44,11 +44,11 @@ export const PICKUP_DROP_COMBO_BONUS = 0.02;
 
 export const WALL = {
   hp: 250,
-  charges: 3,
-  cooldown: 15000,
-  placeCooldown: 500,
+  charges: 8,
+  cooldown: 6000,
+  placeCooldown: 250,
   collisionRadius: 2.5,
-  lifetime: 30000,
+  lifetime: 45000,
 };
 
 export const DASH = {

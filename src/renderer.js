@@ -1,6 +1,14 @@
 import * as THREE from 'https://esm.sh/three@0.162.0';
+import { EffectComposer } from 'https://esm.sh/three@0.162.0/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'https://esm.sh/three@0.162.0/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'https://esm.sh/three@0.162.0/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'https://esm.sh/three@0.162.0/addons/postprocessing/ShaderPass.js';
+import { OutputPass } from 'https://esm.sh/three@0.162.0/addons/postprocessing/OutputPass.js';
+import { ColorGradeShader } from './shaders.js';
 
 export let scene, camera, renderer, clock;
+let composer;
+let colorGradePass;
 
 const CAMERA_HEIGHT = 35;
 const CAMERA_ANGLE = 55 * (Math.PI / 180);
@@ -43,10 +51,29 @@ export function initRenderer() {
 
   clock = new THREE.Clock();
 
+  // Post-processing pipeline
+  composer = new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene, camera));
+
+  const bloomPass = new UnrealBloomPass(
+    new THREE.Vector2(window.innerWidth, window.innerHeight),
+    0.2,   // strength
+    0.8,   // radius
+    0.4    // threshold
+  );
+  composer.addPass(bloomPass);
+
+  colorGradePass = new ShaderPass(ColorGradeShader);
+  composer.addPass(colorGradePass);
+
+  composer.addPass(new OutputPass());
+
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+    composer.setSize(window.innerWidth, window.innerHeight);
+    bloomPass.resolution.set(window.innerWidth, window.innerHeight);
   });
 }
 
@@ -78,5 +105,8 @@ export function updateCamera(targetX, targetZ, aimX, aimZ) {
 }
 
 export function render() {
-  renderer.render(scene, camera);
+  if (colorGradePass) {
+    colorGradePass.uniforms.time.value = performance.now() * 0.001;
+  }
+  composer.render();
 }
