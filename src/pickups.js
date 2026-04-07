@@ -39,10 +39,14 @@ export function removePickupMesh(id) {
   if (pk) { scene.remove(pk.mesh); scene.remove(pk.light); pickupMeshes.delete(id); }
 }
 
-export function syncPickups(serverPickups) {
+export function syncPickups(serverPickups, onRemove) {
   const serverIds = new Set(serverPickups.map(p => p.id));
   for (const [id] of pickupMeshes) {
-    if (!serverIds.has(id)) removePickupMesh(id);
+    if (!serverIds.has(id)) {
+      const pk = pickupMeshes.get(id);
+      if (pk && onRemove) onRemove(pk.mesh.position.x, pk.mesh.position.z);
+      removePickupMesh(id);
+    }
   }
   for (const p of serverPickups) {
     if (!pickupMeshes.has(p.id)) createPickupMesh(p.id, p.type, p.pos[0], p.pos[2]);

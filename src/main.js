@@ -7,7 +7,7 @@ import { updateParticles, spawnKillParticles, spawnSparks, spawnBloodDrops, spaw
 import * as THREE from 'https://esm.sh/three@0.162.0';
 import { scene } from './renderer.js';
 import { showGunShot, showSpecialAttack, showDamageNumber, showExplosion, showHitImpact, updateCombatVisuals } from './combat.js';
-import { playHit, playKill, playExplosion, playWaveStart, playBossSpawn, playPickup, playDeath, playCombo, resumeAudio, playShot } from './audio.js';
+import { playHit, playKill, playExplosion, playWaveStart, playBossSpawn, playPickup, playDeath, playCombo, resumeAudio, playShot, playWallPlace } from './audio.js';
 import { getInput, getMobileInput, isMobile, setupMobileControls, isWallMode, exitWallMode } from './input.js';
 import { connect, sendInput, sendPing, getState, getMyId, getPing, drainEvents } from './network.js';
 import { showTitle, showHUD, showGameOver, updateHUD, showCombo, updatePing, getPlayerName, updateUpgradeDisplay, updateWeaponHUD, showControlsHint, hideControlsHint, updateCountdown, updateAbilities, updateInfo, updatePlayers, showYouDied, hideYouDied, updateWallMode } from './ui.js';
@@ -196,6 +196,7 @@ function gameLoop() {
         if (input.special && now - lastSpecialTime > 3000) {
           lastSpecialTime = now;
           showSpecialAttack(px, pz);
+          playExplosion();
         }
 
         // Wall placement preview ghost -- only in wall mode
@@ -304,7 +305,15 @@ function processState(state, dt) {
     updateEnemyMesh(e.id, e.pos[0], e.pos[2], e.hp, e.maxHp || e.hp, dt);
   }
 
-  syncPickups(state.pickups);
+  // Play pickup sound when a nearby pickup disappears (collected)
+  const me2 = state.players.find(p => p.id === myId);
+  syncPickups(state.pickups, (removedX, removedZ) => {
+    if (me2) {
+      const dx = removedX - (hasPrediction ? predictedX : me2.pos[0]);
+      const dz = removedZ - (hasPrediction ? predictedZ : me2.pos[2]);
+      if (dx * dx + dz * dz < 100) playPickup();
+    }
+  });
 
   // Sync projectiles
   const serverProjIds = new Set((state.projectiles || []).map(p => p.id));
@@ -342,6 +351,7 @@ function processState(state, dt) {
       mesh.castShadow = true;
       scene.add(mesh);
       knownWalls.set(w.id, { mesh, mat, maxHp: w.maxHp || 80 });
+      playWallPlace();
     }
     const wData = knownWalls.get(w.id);
     if (wData) {

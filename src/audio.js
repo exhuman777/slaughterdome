@@ -55,5 +55,6 @@ export function playBossSpawn() { noise(1, 60, 'lowpass'); }
 export function playPickup() { tone(1200, 0.08, 0.1); setTimeout(() => tone(1500, 0.06, 0.1), 40); }
 export function playDeath() { tone(400, 0.15, 0.2); setTimeout(() => tone(300, 0.15, 0.2), 100); setTimeout(() => tone(200, 0.3, 0.2), 200); }
 export function playCombo() { tone(523, 0.2, 0.1); tone(659, 0.2, 0.1); tone(784, 0.2, 0.1); }
+export function playWallPlace() { noise(0.06, 300, 'lowpass'); tone(200, 0.08, 0.12); }
 export function toggleAudio() { enabled = !enabled; return enabled; }
 export function resumeAudio() { if (ctx && ctx.state === 'suspended') ctx.resume(); }
