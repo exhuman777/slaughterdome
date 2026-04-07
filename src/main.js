@@ -18,9 +18,11 @@ const flashOverlay = document.getElementById('flash-overlay');
 function pulseDamageOverlay() {
   if (!flashOverlay) return;
   flashOverlay.style.background = 'radial-gradient(ellipse at center, transparent 50%, rgba(255,0,0,0.4) 100%)';
+  flashOverlay.style.transition = 'none';
   flashOverlay.style.opacity = '1';
+  flashOverlay.offsetHeight; // Force reflow so browser registers opacity:1
   flashOverlay.style.transition = 'opacity 0.3s ease-out';
-  requestAnimationFrame(() => { flashOverlay.style.opacity = '0'; });
+  flashOverlay.style.opacity = '0';
 }
 
 initRenderer();
@@ -90,6 +92,10 @@ async function startGame() {
     knownPlayers.clear();
     knownEnemies.clear();
     removeAllEnemies();
+    for (const [id, data] of knownProjectiles) { scene.remove(data.mesh); }
+    knownProjectiles.clear();
+    for (const [id, data] of knownWalls) { scene.remove(data.mesh); data.mat.dispose(); }
+    knownWalls.clear();
     hasPrediction = false;
     predDashTimer = 0;
     serverOverheated = false;
@@ -207,7 +213,7 @@ function gameLoop() {
             playShot(weaponType);
           }
         }
-        if (input.special && now - lastSpecialTime > 3000) {
+        if (input.special && now - lastSpecialTime > 2500) {
           lastSpecialTime = now;
           showSpecialAttack(px, pz);
           playExplosion();
@@ -353,6 +359,7 @@ function processState(state, dt) {
   for (const [id, data] of knownWalls) {
     if (!serverWallIds.has(id)) {
       scene.remove(data.mesh);
+      data.mat.dispose();
       spawnSparks(data.mesh.position.x, data.mesh.position.z, 0x888888, 10);
       playWallDestroy();
       knownWalls.delete(id);

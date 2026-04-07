@@ -35,7 +35,7 @@ export function createPlayerMesh(id, index) {
   group.add(ring);
 
   scene.add(group);
-  playerMeshes.set(id, { group, body, mat, ring, ringMat, bobTime: 0, color });
+  playerMeshes.set(id, { group, body, mat, ring, ringMat, bobTime: 0, color, hitFlash: 0 });
   return group;
 }
 
@@ -93,7 +93,11 @@ export function setPlayerDashing(id, dashing) {
   if (dashing) {
     pm.group.scale.set(0.8, 1.2, 1.0);
   } else {
-    pm.group.scale.lerp(new THREE.Vector3(1, 1, 1), 0.3);
+    pm.group.scale.set(
+      pm.group.scale.x + (1 - pm.group.scale.x) * 0.3,
+      pm.group.scale.y + (1 - pm.group.scale.y) * 0.3,
+      pm.group.scale.z + (1 - pm.group.scale.z) * 0.3
+    );
   }
 }
 

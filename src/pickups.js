@@ -36,7 +36,11 @@ export function updatePickups(dt) {
 
 export function removePickupMesh(id) {
   const pk = pickupMeshes.get(id);
-  if (pk) { scene.remove(pk.mesh); scene.remove(pk.light); pickupMeshes.delete(id); }
+  if (pk) {
+    scene.remove(pk.mesh); scene.remove(pk.light);
+    pk.mesh.geometry.dispose(); pk.mesh.material.dispose();
+    pickupMeshes.delete(id);
+  }
 }
 
 export function syncPickups(serverPickups, onRemove) {

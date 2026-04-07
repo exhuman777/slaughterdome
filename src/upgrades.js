@@ -25,6 +25,7 @@ export function showUpgradeShop(options) {
   });
 
   keyHandler = (e) => {
+    if (e.repeat) return;
     if (e.code === 'Digit1' || e.code === 'Numpad1') pick(0);
     if (e.code === 'Digit2' || e.code === 'Numpad2') pick(1);
     if (e.code === 'Digit3' || e.code === 'Numpad3') pick(2);

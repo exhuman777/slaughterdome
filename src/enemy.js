@@ -131,6 +131,10 @@ export function updateDyingEnemies(dt) {
     d.mat.opacity = t;
     d.mat.transparent = true;
     if (d.timer <= 0) {
+      d.group.traverse(child => {
+        if (child.geometry) child.geometry.dispose();
+        if (child.material) child.material.dispose();
+      });
       scene.remove(d.group);
       dyingEnemies.splice(i, 1);
     }

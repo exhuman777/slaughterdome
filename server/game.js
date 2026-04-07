@@ -73,19 +73,21 @@ function updatePlayers(room, dt) {
   for (const [, p] of room.players) {
     if (!p.alive) continue;
     // Dash processing
-    if (p.input.dash && p.dashCooldown <= 0 && p.dashTimer <= 0) {
-      let ddx = p.input.dx, ddz = p.input.dz;
-      const dlen = Math.sqrt(ddx * ddx + ddz * ddz);
-      if (dlen > 0) { ddx /= dlen; ddz /= dlen; }
-      else {
-        const aDx = p.input.aimX - p.x, aDz = p.input.aimZ - p.z;
-        const aLen = Math.sqrt(aDx * aDx + aDz * aDz) || 1;
-        ddx = aDx / aLen; ddz = aDz / aLen;
+    if (p.input.dash) {
+      if (p.dashCooldown <= 0 && p.dashTimer <= 0) {
+        let ddx = p.input.dx, ddz = p.input.dz;
+        const dlen = Math.sqrt(ddx * ddx + ddz * ddz);
+        if (dlen > 0) { ddx /= dlen; ddz /= dlen; }
+        else {
+          const aDx = p.input.aimX - p.x, aDz = p.input.aimZ - p.z;
+          const aLen = Math.sqrt(aDx * aDx + aDz * aDz) || 1;
+          ddx = aDx / aLen; ddz = aDz / aLen;
+        }
+        p.dashDirX = ddx; p.dashDirZ = ddz;
+        p.dashTimer = DASH.duration;
+        p.dashCooldown = Math.max(800, DASH.cooldown - (p.upgrades.dash_cooldown || 0) * 300);
+        p.dashIframes = DASH.iframes;
       }
-      p.dashDirX = ddx; p.dashDirZ = ddz;
-      p.dashTimer = DASH.duration;
-      p.dashCooldown = Math.max(800, DASH.cooldown - (p.upgrades.dash_cooldown || 0) * 300);
-      p.dashIframes = DASH.iframes;
       p.input.dash = false;
     }
     if (p.dashTimer > 0) {
@@ -149,16 +151,18 @@ function updatePlayers(room, dt) {
       specialAttack(room, p);
     }
     // Wall placement
-    if (p.input.wall && p.wallCharges > 0 && p.wallPlaceCooldown <= 0) {
-      p.wallCharges--;
-      p.wallPlaceCooldown = WALL.placeCooldown;
-      if (p.wallCharges <= 0) p.wallRechargeTimer = WALL.cooldown;
-      const aimAngle = Math.atan2(p.input.aimZ - p.z, p.input.aimX - p.x);
-      const aimDist = Math.sqrt((p.input.aimX - p.x) ** 2 + (p.input.aimZ - p.z) ** 2);
-      const placeDist = Math.min(aimDist, 8);
-      const wx = p.x + Math.cos(aimAngle) * placeDist;
-      const wz = p.z + Math.sin(aimAngle) * placeDist;
-      spawnWall(room, wx, wz, aimAngle + Math.PI / 2, p);
+    if (p.input.wall) {
+      if (p.wallCharges > 0 && p.wallPlaceCooldown <= 0) {
+        p.wallCharges--;
+        p.wallPlaceCooldown = WALL.placeCooldown;
+        if (p.wallCharges <= 0) p.wallRechargeTimer = WALL.cooldown;
+        const aimAngle = Math.atan2(p.input.aimZ - p.z, p.input.aimX - p.x);
+        const aimDist = Math.sqrt((p.input.aimX - p.x) ** 2 + (p.input.aimZ - p.z) ** 2);
+        const placeDist = Math.min(aimDist, 8);
+        const wx = p.x + Math.cos(aimAngle) * placeDist;
+        const wz = p.z + Math.sin(aimAngle) * placeDist;
+        spawnWall(room, wx, wz, aimAngle + Math.PI / 2, p);
+      }
       p.input.wall = false;
     }
     if (p.wallPlaceCooldown > 0) p.wallPlaceCooldown -= TICK_MS;
@@ -270,7 +274,7 @@ function killEnemy(room, enemy, player) {
   room.broadcast({ t: 'kill', eid: enemy.id, pid: player.id, dmg: 0, pos: [enemy.x, 0, enemy.z], combo: room.combo });
   if (enemy.type === 'bomber') {
     const bx = enemy.x, bz = enemy.z;
-    setTimeout(() => bomberExplode(room, bx, bz), 2000);
+    setTimeout(() => { if (room.state === 'combat') bomberExplode(room, bx, bz); }, 2000);
   }
   const dropChance = PICKUP_DROP_BASE + room.combo * PICKUP_DROP_COMBO_BONUS;
   if (Math.random() < dropChance) spawnPickup(room, enemy.x, enemy.z);
@@ -560,7 +564,7 @@ function spawnWave(room) {
 function spawnEnemy(room, type, wave) {
   const def = ENEMY_DEFS[type];
   const angle = Math.random() * Math.PI * 2;
-  const spawnDist = ARENA_RADIUS + 3;
+  const spawnDist = room.arenaRadius + 3;
   const id = 'e' + nextEnemyId++;
   const hp = type === 'titan'
     ? SCALING.bossHpBase + SCALING.bossHpPerBoss * Math.floor(wave / 5)
