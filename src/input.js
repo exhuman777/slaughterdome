@@ -13,10 +13,10 @@ const intersection = new THREE.Vector3();
 
 document.addEventListener('keydown', e => {
   keys[e.code] = true;
-  if (e.code === 'KeyE') {
+  if (e.code === 'KeyE' && !e.repeat) {
     wallMode = !wallMode;
   }
-  if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') dashTriggered = true;
+  if ((e.code === 'ShiftLeft' || e.code === 'ShiftRight') && !e.repeat) dashTriggered = true;
   if (e.code === 'Escape') wallMode = false;
 });
 document.addEventListener('keyup', e => { keys[e.code] = false; });
