@@ -1,17 +1,27 @@
 import { initRenderer, render, clock, updateCamera, setCamDt } from './renderer.js';
 import { createArena, setBiome, updateBiome, updateArenaRadius } from './arena.js';
-import { createPlayerMesh, updatePlayerMesh, setPlayerRotation, setPlayerDashing, removePlayerMesh, markLocalPlayer } from './player.js';
-import { createEnemyMesh, updateEnemyMesh, flashEnemy, removeEnemyMesh, removeAllEnemies } from './enemy.js';
+import { createPlayerMesh, updatePlayerMesh, setPlayerRotation, setPlayerDashing, removePlayerMesh, markLocalPlayer, flashPlayer } from './player.js';
+import { createEnemyMesh, updateEnemyMesh, flashEnemy, removeEnemyMesh, removeAllEnemies, updateDyingEnemies } from './enemy.js';
 import { updatePickups as updatePickupMeshes, syncPickups } from './pickups.js';
-import { updateParticles, spawnKillParticles, spawnSparks, spawnBloodDrops, spawnDustPuff, spawnSpeedTrail } from './particles.js';
+import { updateParticles, spawnKillParticles, spawnSparks, spawnBloodDrops, spawnDustPuff, spawnSpeedTrail, spawnFloatingText } from './particles.js';
 import * as THREE from 'https://esm.sh/three@0.162.0';
 import { scene } from './renderer.js';
 import { showGunShot, showSpecialAttack, showDamageNumber, showExplosion, showHitImpact, updateCombatVisuals } from './combat.js';
-import { playHit, playKill, playExplosion, playWaveStart, playBossSpawn, playPickup, playDeath, playCombo, resumeAudio, playShot, playWallPlace } from './audio.js';
+import { playHit, playKill, playExplosion, playWaveStart, playBossSpawn, playPickup, playDeath, playCombo, resumeAudio, playShot, playWallPlace, playDash, playWallDestroy, playWaveClear } from './audio.js';
 import { getInput, getMobileInput, isMobile, setupMobileControls, isWallMode, exitWallMode } from './input.js';
 import { connect, sendInput, sendPing, getState, getMyId, getPing, drainEvents } from './network.js';
 import { showTitle, showHUD, showGameOver, updateHUD, showCombo, updatePing, getPlayerName, updateUpgradeDisplay, updateWeaponHUD, showControlsHint, hideControlsHint, updateCountdown, updateAbilities, updateInfo, updatePlayers, showYouDied, hideYouDied, updateWallMode } from './ui.js';
 import { showUpgradeShop, hideUpgradeShop } from './upgrades.js';
+
+// Screen edge damage pulse
+const flashOverlay = document.getElementById('flash-overlay');
+function pulseDamageOverlay() {
+  if (!flashOverlay) return;
+  flashOverlay.style.background = 'radial-gradient(ellipse at center, transparent 50%, rgba(255,0,0,0.4) 100%)';
+  flashOverlay.style.opacity = '1';
+  flashOverlay.style.transition = 'opacity 0.3s ease-out';
+  requestAnimationFrame(() => { flashOverlay.style.opacity = '0'; });
+}
 
 initRenderer();
 createArena();
@@ -59,6 +69,8 @@ let speedTrailCounter = 0;
 // Track server overheated state for visual sync
 let serverOverheated = false;
 let wasAlive = true;
+let lastComboTier = 0;
+const COMBO_TIER_THRESHOLDS = [5, 10, 15, 20, 30, 50];
 
 if (isMobile()) setupMobileControls();
 
@@ -82,6 +94,7 @@ async function startGame() {
     predDashTimer = 0;
     serverOverheated = false;
     wasAlive = true;
+    lastComboTier = 0;
     hideYouDied();
     markLocalPlayer(getMyId());
     scene.add(ghostWall);
@@ -95,9 +108,9 @@ let lastFrameTime = performance.now();
 function gameLoop() {
   requestAnimationFrame(gameLoop);
   const now = performance.now();
-  const dtMs = now - lastFrameTime;
+  const dtMs = Math.min(now - lastFrameTime, 100); // Cap at 100ms to prevent physics explosions
   lastFrameTime = now;
-  const dt = clock.getDelta();
+  const dt = Math.min(clock.getDelta(), 0.1);
   setCamDt(dt);
 
   if (gameActive) {
@@ -133,6 +146,7 @@ function gameLoop() {
           predDashDirX = ddx; predDashDirZ = ddz;
           predDashTimer = DASH_DURATION;
           spawnDustPuff(predictedX, predictedZ);
+          playDash();
         }
 
         if (predDashTimer > 0) {
@@ -236,6 +250,7 @@ function gameLoop() {
   updatePickupMeshes(dt);
   updateParticles(dt);
   updateCombatVisuals(dt);
+  updateDyingEnemies(dt);
 
   const myId = getMyId();
   const state = getState();
@@ -339,6 +354,7 @@ function processState(state, dt) {
     if (!serverWallIds.has(id)) {
       scene.remove(data.mesh);
       spawnSparks(data.mesh.position.x, data.mesh.position.z, 0x888888, 10);
+      playWallDestroy();
       knownWalls.delete(id);
     }
   }
@@ -385,19 +401,35 @@ function processState(state, dt) {
 
   setBiome(state.wave);
   showCombo(state.combo);
+
+  // Combo audio escalation -- play sound when crossing tier thresholds
+  let currentTier = 0;
+  for (const t of COMBO_TIER_THRESHOLDS) { if (state.combo >= t) currentTier = t; }
+  if (currentTier > lastComboTier && currentTier > 0) playCombo();
+  lastComboTier = currentTier;
 }
 
 function handleEvent(ev) {
   switch (ev.t) {
-    case 'kill':
+    case 'kill': {
       spawnKillParticles(ev.pos[0], ev.pos[2], 0xff4444);
       playKill();
+      // Score popup at kill location
+      const combo = ev.combo || 0;
+      const wave = getState()?.wave || 1;
+      let multiplier = 1;
+      for (const t of COMBO_TIER_THRESHOLDS) { if (combo >= t) multiplier = 1 + (COMBO_TIER_THRESHOLDS.indexOf(t) + 1) * 0.1; }
+      const pts = Math.floor((10 + wave * 2) * multiplier);
+      spawnFloatingText(ev.pos[0] + 1.5, ev.pos[2], '+' + pts, '#e6993a', 2);
       break;
+    }
     case 'hit': {
       const isMe = ev.target === getMyId();
       if (isMe) {
         const me = getState()?.players?.find(p => p.id === getMyId());
         if (me) spawnBloodDrops(me.pos[0], me.pos[2]);
+        flashPlayer(getMyId());
+        pulseDamageOverlay();
       }
       if (ev.pos) {
         showDamageNumber(ev.pos[0], ev.pos[2], ev.dmg, ev.crit);
@@ -407,9 +439,19 @@ function handleEvent(ev) {
       flashEnemy(ev.target);
       break;
     }
-    case 'upgrades':
+    case 'upgrades': {
+      // Wave cleared -- celebrate before showing shop
+      const meNow = getState()?.players?.find(p => p.id === getMyId());
+      const px2 = meNow ? (hasPrediction ? predictedX : meNow.pos[0]) : 0;
+      const pz2 = meNow ? (hasPrediction ? predictedZ : meNow.pos[2]) : 0;
+      spawnKillParticles(px2, pz2, 0xe6993a);
+      spawnSparks(px2, pz2, 0xffcc44, 6);
+      playWaveClear();
+      const waveNum = getState()?.wave || 0;
+      spawnFloatingText(px2, pz2, 'WAVE ' + waveNum + ' CLEARED', '#e6993a', 3);
       showUpgradeShop(ev.options);
       break;
+    }
     case 'wave': {
       hideUpgradeShop();
       playWaveStart();

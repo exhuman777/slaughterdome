@@ -61,6 +61,15 @@ export function updatePlayerMesh(id, x, z, alive, moving, dt) {
   } else {
     pm.group.position.y *= 0.85;
   }
+  // Hit flash: red tint when damaged
+  if (pm.hitFlash > 0) {
+    pm.hitFlash -= dt;
+    pm.mat.emissive.set(0xff0000);
+    pm.mat.emissiveIntensity = 1.5 * (pm.hitFlash / 0.15);
+  } else {
+    pm.mat.emissive.set(pm.color);
+    pm.mat.emissiveIntensity = 0.25;
+  }
   const pulse = 1 + Math.sin(Date.now() / 250) * 0.1;
   pm.ring.scale.set(pulse, 1, pulse);
   if (id === localId) {
@@ -71,6 +80,11 @@ export function updatePlayerMesh(id, x, z, alive, moving, dt) {
 export function setPlayerRotation(id, angle) {
   const pm = playerMeshes.get(id);
   if (pm) pm.group.rotation.y = -angle + Math.PI / 2;
+}
+
+export function flashPlayer(id) {
+  const pm = playerMeshes.get(id);
+  if (pm) pm.hitFlash = 0.15;
 }
 
 export function setPlayerDashing(id, dashing) {

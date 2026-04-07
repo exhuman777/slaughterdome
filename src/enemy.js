@@ -110,9 +110,31 @@ export function flashEnemy(id) {
   if (em) { em.flashTimer = 0.15; em.scalePunch = 1; }
 }
 
+const dyingEnemies = [];
+
 export function removeEnemyMesh(id) {
   const em = enemyMeshes.get(id);
-  if (em) { scene.remove(em.group); enemyMeshes.delete(id); }
+  if (em) {
+    // Start death animation instead of instant removal
+    dyingEnemies.push({ group: em.group, mat: em.mat, timer: 0.25 });
+    enemyMeshes.delete(id);
+  }
+}
+
+export function updateDyingEnemies(dt) {
+  for (let i = dyingEnemies.length - 1; i >= 0; i--) {
+    const d = dyingEnemies[i];
+    d.timer -= dt;
+    const t = Math.max(0, d.timer / 0.25);
+    d.group.scale.set(t, t, t);
+    d.group.position.y += dt * 3; // Float up slightly
+    d.mat.opacity = t;
+    d.mat.transparent = true;
+    if (d.timer <= 0) {
+      scene.remove(d.group);
+      dyingEnemies.splice(i, 1);
+    }
+  }
 }
 
 export function removeAllEnemies() {

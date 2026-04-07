@@ -56,5 +56,8 @@ export function playPickup() { tone(1200, 0.08, 0.1); setTimeout(() => tone(1500
 export function playDeath() { tone(400, 0.15, 0.2); setTimeout(() => tone(300, 0.15, 0.2), 100); setTimeout(() => tone(200, 0.3, 0.2), 200); }
 export function playCombo() { tone(523, 0.2, 0.1); tone(659, 0.2, 0.1); tone(784, 0.2, 0.1); }
 export function playWallPlace() { noise(0.06, 300, 'lowpass'); tone(200, 0.08, 0.12); }
+export function playDash() { noise(0.08, 2000, 'highpass'); tone(800, 0.06, 0.08); }
+export function playWallDestroy() { noise(0.15, 200, 'lowpass'); tone(120, 0.12, 0.15); }
+export function playWaveClear() { tone(523, 0.1, 0.15); setTimeout(() => tone(659, 0.1, 0.15), 80); setTimeout(() => tone(784, 0.12, 0.15), 160); setTimeout(() => tone(1047, 0.2, 0.12), 240); }
 export function toggleAudio() { enabled = !enabled; return enabled; }
 export function resumeAudio() { if (ctx && ctx.state === 'suspended') ctx.resume(); }
