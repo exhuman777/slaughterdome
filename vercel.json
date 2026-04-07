@@ -8,9 +8,8 @@
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=3600" }
+        { "key": "Cache-Control", "value": "public, max-age=60" }
       ]
     }
-  ],
-  "ignoreCommand": "exit 0"
+  ]
 }
