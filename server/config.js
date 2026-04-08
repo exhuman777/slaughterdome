@@ -62,7 +62,7 @@ export const DASH = {
 };
 
 export const SWORD = {
-  damage: 25,
+  damage: 45,
   range: 3.0,
   arc: 1.8,
   cooldown: 250,

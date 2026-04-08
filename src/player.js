@@ -7,8 +7,11 @@ let localId = null;
 
 // Dash afterimage system
 const afterimages = [];
-const afterimageGeo = new THREE.BoxGeometry(1.2, 2.0, 0.8);
-const AFTERIMAGE_INTERVAL = 0.025;
+const afterimageGeo = new THREE.BoxGeometry(1.0, 2.8, 0.7);
+const AFTERIMAGE_INTERVAL = 0.018;
+const speedLineGeo = new THREE.PlaneGeometry(2.5, 0.12);
+const burstRingGeo = new THREE.RingGeometry(0.5, 1.2, 24);
+burstRingGeo.rotateX(-Math.PI / 2);
 
 export function createPlayerMesh(id, index) {
   const color = PLAYER_COLORS[index % PLAYER_COLORS.length];
@@ -96,29 +99,70 @@ export function setPlayerDashing(id, dashing) {
   const pm = playerMeshes.get(id);
   if (!pm) return;
   if (dashing) {
-    pm.group.scale.set(0.8, 1.2, 1.0);
-    // Spawn afterimage
+    // Extreme squash/stretch
+    pm.group.scale.set(0.6, 1.4, 0.6);
+    // Burst ring on dash START
+    if (!pm.dashActive) {
+      pm.dashActive = true;
+      const burstMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9, side: THREE.DoubleSide });
+      const burst = new THREE.Mesh(burstRingGeo, burstMat);
+      burst.position.set(pm.group.position.x, 0.15, pm.group.position.z);
+      scene.add(burst);
+      afterimages.push({ mesh: burst, mat: burstMat, life: 0.35, isBurst: true, startScale: 1 });
+      // Second colored ring
+      const burst2Mat = new THREE.MeshBasicMaterial({ color: pm.color, transparent: true, opacity: 0.7, side: THREE.DoubleSide });
+      const burst2 = new THREE.Mesh(burstRingGeo, burst2Mat);
+      burst2.position.set(pm.group.position.x, 0.1, pm.group.position.z);
+      scene.add(burst2);
+      afterimages.push({ mesh: burst2, mat: burst2Mat, life: 0.5, isBurst: true, startScale: 0.5 });
+    }
+    // Spawn afterimage ghosts
     pm.afterimageTimer = (pm.afterimageTimer || 0) - 0.016;
     if (pm.afterimageTimer <= 0) {
       pm.afterimageTimer = AFTERIMAGE_INTERVAL;
-      // Bright cyan-white ghost
-      const mat = new THREE.MeshBasicMaterial({ color: 0x88ddff, transparent: true, opacity: 0.7 });
+      // Full-body ghost silhouette
+      const mat = new THREE.MeshBasicMaterial({ color: 0xccffff, transparent: true, opacity: 0.85 });
       const ghost = new THREE.Mesh(afterimageGeo, mat);
       ghost.position.copy(pm.group.position);
-      ghost.position.y += 1.2;
+      ghost.position.y += 1.4;
       ghost.rotation.y = pm.group.rotation.y;
+      ghost.scale.set(1, 1, 0.8);
       scene.add(ghost);
-      afterimages.push({ mesh: ghost, mat, life: 0.25 });
-      // Ground streak
-      const trailMat = new THREE.MeshBasicMaterial({ color: pm.color, transparent: true, opacity: 0.6, side: THREE.DoubleSide });
-      const trailGeo = new THREE.PlaneGeometry(0.8, 0.8);
+      afterimages.push({ mesh: ghost, mat, life: 0.35 });
+      // Wide ground streak
+      const trailMat = new THREE.MeshBasicMaterial({ color: pm.color, transparent: true, opacity: 0.7, side: THREE.DoubleSide });
+      const trailGeo = new THREE.PlaneGeometry(1.4, 1.4);
       trailGeo.rotateX(-Math.PI / 2);
       const trail = new THREE.Mesh(trailGeo, trailMat);
-      trail.position.set(pm.group.position.x, 0.05, pm.group.position.z);
+      trail.position.set(pm.group.position.x, 0.04, pm.group.position.z);
+      trail.rotation.y = pm.group.rotation.y;
       scene.add(trail);
-      afterimages.push({ mesh: trail, mat: trailMat, life: 0.4, disposeGeo: true });
+      afterimages.push({ mesh: trail, mat: trailMat, life: 0.5, disposeGeo: true });
+      // Speed lines shooting sideways
+      for (let s = -1; s <= 1; s += 2) {
+        const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6, side: THREE.DoubleSide });
+        const line = new THREE.Mesh(speedLineGeo, lineMat);
+        const perpAngle = pm.group.rotation.y + Math.PI / 2;
+        line.position.set(
+          pm.group.position.x + Math.sin(perpAngle) * s * (0.5 + Math.random() * 0.5),
+          0.8 + Math.random() * 1.5,
+          pm.group.position.z + Math.cos(perpAngle) * s * (0.5 + Math.random() * 0.5)
+        );
+        line.rotation.y = pm.group.rotation.y;
+        scene.add(line);
+        afterimages.push({ mesh: line, mat: lineMat, life: 0.15 });
+      }
     }
   } else {
+    if (pm.dashActive) {
+      pm.dashActive = false;
+      // End-of-dash dust burst
+      const endMat = new THREE.MeshBasicMaterial({ color: pm.color, transparent: true, opacity: 0.6, side: THREE.DoubleSide });
+      const endBurst = new THREE.Mesh(burstRingGeo, endMat);
+      endBurst.position.set(pm.group.position.x, 0.1, pm.group.position.z);
+      scene.add(endBurst);
+      afterimages.push({ mesh: endBurst, mat: endMat, life: 0.25, isBurst: true, startScale: 0.5 });
+    }
     pm.afterimageTimer = 0;
     pm.group.scale.set(
       pm.group.scale.x + (1 - pm.group.scale.x) * 0.3,
@@ -132,9 +176,22 @@ export function updateAfterimages(dt) {
   for (let i = afterimages.length - 1; i >= 0; i--) {
     const a = afterimages[i];
     a.life -= dt;
-    const maxLife = a.disposeGeo ? 0.4 : 0.25;
-    a.mat.opacity = Math.max(0, a.life / maxLife) * 0.7;
-    if (!a.disposeGeo) a.mesh.scale.y *= 0.94;
+    if (a.isBurst) {
+      // Expanding ring burst
+      const maxLife = a.life + dt > 0.4 ? 0.5 : (a.life + dt > 0.3 ? 0.35 : 0.25);
+      const t = 1 - Math.max(0, a.life / maxLife);
+      const s = (a.startScale || 1) + t * 5;
+      a.mesh.scale.set(s, 1, s);
+      a.mat.opacity = Math.max(0, a.life / maxLife) * 0.9;
+    } else if (a.disposeGeo) {
+      a.mat.opacity = Math.max(0, a.life / 0.5) * 0.7;
+    } else {
+      const maxLife = 0.35;
+      a.mat.opacity = Math.max(0, a.life / maxLife) * 0.85;
+      a.mesh.scale.y *= 0.96;
+      a.mesh.scale.x *= 0.98;
+      a.mesh.scale.z *= 0.98;
+    }
     if (a.life <= 0) {
       scene.remove(a.mesh);
       a.mat.dispose();

@@ -51,24 +51,61 @@ export function showGunShot(px, pz, angle, weaponType) {
 }
 
 export function showSpecialAttack(x, z) {
-  spawnAoeRing(x, z, 5, 0xffaa00);
-  for (let i = 0; i < 8; i++) {
-    const a = (i / 8) * Math.PI * 2;
-    const beamGeo = new THREE.PlaneGeometry(5, 0.2);
-    const beamMat = new THREE.MeshBasicMaterial({ color: 0xffcc33, transparent: true, opacity: 0.7, side: THREE.DoubleSide });
+  spawnAoeRing(x, z, 6, 0xffaa00);
+  // Shockwave disc -- expands fast
+  const waveGeo = new THREE.CircleGeometry(1, 32);
+  waveGeo.rotateX(-Math.PI / 2);
+  const waveMat = new THREE.MeshBasicMaterial({ color: 0xffcc44, transparent: true, opacity: 0.9, side: THREE.DoubleSide });
+  const wave = new THREE.Mesh(waveGeo, waveMat);
+  wave.position.set(x, 0.12, z);
+  scene.add(wave);
+  effects.push({ mesh: wave, mat: waveMat, life: 0.4, maxLife: 0.4, expandRate: 14 });
+  // Inner flash
+  const flashGeo = new THREE.CircleGeometry(2, 16);
+  flashGeo.rotateX(-Math.PI / 2);
+  const flashMat = new THREE.MeshBasicMaterial({ color: 0xffffdd, transparent: true, opacity: 1, side: THREE.DoubleSide });
+  const flash = new THREE.Mesh(flashGeo, flashMat);
+  flash.position.set(x, 0.25, z);
+  scene.add(flash);
+  effects.push({ mesh: flash, mat: flashMat, life: 0.15, maxLife: 0.15, expandRate: 6 });
+  // Radial energy beams -- 12 spinning outward
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    const beamGeo = new THREE.PlaneGeometry(6, 0.25);
+    const color = i % 2 === 0 ? 0xffcc33 : 0xff8800;
+    const beamMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.8, side: THREE.DoubleSide });
     const beam = new THREE.Mesh(beamGeo, beamMat);
-    beam.position.set(x, 0.3, z);
+    beam.position.set(x, 0.3 + (i % 3) * 0.15, z);
     beam.rotation.set(Math.PI / 2, 0, a);
     scene.add(beam);
-    effects.push({ mesh: beam, mat: beamMat, life: 0.25, maxLife: 0.25 });
+    effects.push({ mesh: beam, mat: beamMat, life: 0.3, maxLife: 0.3 });
   }
-  const flashGeo = new THREE.CircleGeometry(1.5, 16);
-  flashGeo.rotateX(-Math.PI / 2);
-  const flashMat = new THREE.MeshBasicMaterial({ color: 0xffffaa, transparent: true, opacity: 1, side: THREE.DoubleSide });
-  const flash = new THREE.Mesh(flashGeo, flashMat);
-  flash.position.set(x, 0.2, z);
-  scene.add(flash);
-  effects.push({ mesh: flash, mat: flashMat, life: 0.2, maxLife: 0.2, expandRate: 8 });
+  // Vertical pillar
+  const pillarGeo = new THREE.CylinderGeometry(0.8, 1.5, 8, 12, 1, true);
+  const pillarMat = new THREE.MeshBasicMaterial({ color: 0xffaa22, transparent: true, opacity: 0.5, side: THREE.DoubleSide });
+  const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+  pillar.position.set(x, 4, z);
+  scene.add(pillar);
+  effects.push({ mesh: pillar, mat: pillarMat, life: 0.5, maxLife: 0.5, expandRate: 3, disposeGeo: true });
+  // Ground cracks -- radial lines
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2 + Math.random() * 0.3;
+    const len = 3 + Math.random() * 3;
+    const crackGeo = new THREE.PlaneGeometry(len, 0.08);
+    crackGeo.rotateX(-Math.PI / 2);
+    const crackMat = new THREE.MeshBasicMaterial({ color: 0xff6600, transparent: true, opacity: 0.7, side: THREE.DoubleSide });
+    const crack = new THREE.Mesh(crackGeo, crackMat);
+    crack.position.set(x + Math.cos(a) * len * 0.5, 0.03, z + Math.sin(a) * len * 0.5);
+    crack.rotation.y = a;
+    scene.add(crack);
+    effects.push({ mesh: crack, mat: crackMat, life: 0.6, maxLife: 0.6, disposeGeo: true });
+  }
+  // Spark ring burst
+  spawnSparks(x, z, 0xffcc44, 6);
+  spawnSparks(x + 2, z, 0xff8800, 4);
+  spawnSparks(x - 2, z, 0xff8800, 4);
+  spawnSparks(x, z + 2, 0xffaa00, 4);
+  spawnSparks(x, z - 2, 0xffaa00, 4);
 }
 
 let dmgSlot = 0;
