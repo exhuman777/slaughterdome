@@ -73,6 +73,9 @@ const corpses = [];
 const corpseGeo = new THREE.PlaneGeometry(1.2, 1.2);
 corpseGeo.rotateX(-Math.PI / 2);
 
+// Environment obstacles
+const obstacleMeshes = new Map();
+
 // Track server overheated state for visual sync
 let serverOverheated = false;
 let wasAlive = true;
@@ -111,6 +114,8 @@ function quitToMenu() {
   knownEnemies.clear();
   for (const c of corpses) { scene.remove(c); c.material.dispose(); }
   corpses.length = 0;
+  for (const [, mesh] of obstacleMeshes) { scene.remove(mesh); }
+  obstacleMeshes.clear();
   showTitle();
 }
 
@@ -133,7 +138,9 @@ async function startGame() {
     knownWalls.clear();
     for (const c of corpses) { scene.remove(c); c.material.dispose(); }
     corpses.length = 0;
-    hasPrediction = false;
+    for (const [, mesh] of obstacleMeshes) { scene.remove(mesh); }
+    obstacleMeshes.clear();
+      hasPrediction = false;
     predDashTimer = 0;
     serverOverheated = false;
     wasAlive = true;
@@ -216,6 +223,19 @@ function gameLoop() {
           predictedX *= s;
           predictedZ *= s;
         }
+        // Client-side obstacle prediction
+        if (state.obstacles) {
+          for (const ob of state.obstacles) {
+            const odx = predictedX - ob.pos[0], odz = predictedZ - ob.pos[2];
+            const odist = Math.sqrt(odx * odx + odz * odz);
+            const minD = ob.radius + 0.5;
+            if (odist < minD && odist > 0.01) {
+              const push = (minD - odist) / odist;
+              predictedX += odx * push;
+              predictedZ += odz * push;
+            }
+          }
+        }
 
         // Direction change dust puff
         if ((input.dx !== 0 || input.dz !== 0) &&
@@ -240,7 +260,7 @@ function gameLoop() {
         const pz = predictedZ;
         if (input.attack) {
           const weaponType = me.weapon || 'pistol';
-          const wepCooldowns = { pistol: 150, shotgun: 400, railgun: 400, flamethrower: 80 };
+          const wepCooldowns = { pistol: 150, shotgun: 400, flamethrower: 80 };
           let cooldown = wepCooldowns[weaponType] || 150;
           if (serverOverheated) cooldown *= 3; // Match server OVERHEAT.slowMult
           if (now - lastAttackTime > cooldown) {
@@ -424,6 +444,54 @@ function processState(state, dt) {
       const g = 0.53 * hpRatio;
       const b = 0.6 * hpRatio;
       wData.mat.color.setRGB(r, g, b);
+    }
+  }
+
+  // Sync environment obstacles (trees + water)
+  if (state.obstacles) {
+    for (const ob of state.obstacles) {
+      const key = ob.type + '_' + ob.pos[0] + '_' + ob.pos[2];
+      if (obstacleMeshes.has(key)) continue;
+      if (ob.type === 'tree') {
+        const group = new THREE.Group();
+        const trunkGeo = new THREE.CylinderGeometry(0.3, 0.4, 3, 6);
+        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c3a1e, roughness: 0.9 });
+        const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+        trunk.position.y = 1.5;
+        trunk.castShadow = true;
+        group.add(trunk);
+        const canopyGeo = new THREE.SphereGeometry(1.4, 8, 6);
+        const canopyMat = new THREE.MeshStandardMaterial({ color: 0x2d5a1e, roughness: 0.8 });
+        const canopy = new THREE.Mesh(canopyGeo, canopyMat);
+        canopy.position.y = 3.5;
+        canopy.castShadow = true;
+        group.add(canopy);
+        const canopy2Geo = new THREE.SphereGeometry(1.0, 6, 5);
+        const canopy2 = new THREE.Mesh(canopy2Geo, canopyMat);
+        canopy2.position.set(0.5, 4.2, 0.3);
+        group.add(canopy2);
+        group.position.set(ob.pos[0], 0, ob.pos[2]);
+        group.rotation.y = Math.random() * Math.PI * 2;
+        scene.add(group);
+        obstacleMeshes.set(key, group);
+      } else if (ob.type === 'water') {
+        const group = new THREE.Group();
+        const waterGeo = new THREE.CircleGeometry(ob.radius, 24);
+        waterGeo.rotateX(-Math.PI / 2);
+        const waterMat = new THREE.MeshStandardMaterial({ color: 0x1a4a7a, transparent: true, opacity: 0.7, roughness: 0.1, metalness: 0.3, side: THREE.DoubleSide });
+        const water = new THREE.Mesh(waterGeo, waterMat);
+        water.position.y = 0.03;
+        group.add(water);
+        const edgeGeo = new THREE.RingGeometry(ob.radius - 0.3, ob.radius + 0.2, 24);
+        edgeGeo.rotateX(-Math.PI / 2);
+        const edgeMat = new THREE.MeshBasicMaterial({ color: 0x3a6a4a, transparent: true, opacity: 0.5, side: THREE.DoubleSide });
+        const edge = new THREE.Mesh(edgeGeo, edgeMat);
+        edge.position.y = 0.04;
+        group.add(edge);
+        group.position.set(ob.pos[0], 0, ob.pos[2]);
+        scene.add(group);
+        obstacleMeshes.set(key, group);
+      }
     }
   }
 

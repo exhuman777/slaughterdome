@@ -132,18 +132,19 @@ export function spawnAoeRing(x, z, radius, color) {
   particles.push({ mesh, mat, vx: 0, vy: 0, vz: 0, life: 0.4, decay: 2.5, isRing: true, targetRadius: radius, disposeGeo: true });
 }
 
-export function spawnFloatingText(x, z, text, color, scale) {
+export function spawnFloatingText(x, z, text, color, scale, fontOverride) {
   if (particles.length >= MAX_PARTICLES) return;
   const canvas = document.createElement('canvas');
-  canvas.width = 256; canvas.height = 64;
+  canvas.width = 512; canvas.height = 128;
   const ctx = canvas.getContext('2d');
-  ctx.font = '700 48px monospace';
+  const font = fontOverride || '700 48px monospace';
+  ctx.font = font;
   ctx.strokeStyle = '#000000';
-  ctx.lineWidth = 4;
+  ctx.lineWidth = 5;
   ctx.textAlign = 'center';
-  ctx.strokeText(text, 128, 48);
+  ctx.strokeText(text, 256, 90);
   ctx.fillStyle = color || '#ffffff';
-  ctx.fillText(text, 128, 48);
+  ctx.fillText(text, 256, 90);
   const tex = new THREE.CanvasTexture(canvas);
   const mat = new THREE.SpriteMaterial({ map: tex, transparent: true });
   const sprite = new THREE.Sprite(mat);

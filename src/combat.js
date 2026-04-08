@@ -9,29 +9,6 @@ export function showGunShot(px, pz, angle, weaponType) {
   const fz = pz + Math.sin(angle) * 0.8;
   weaponType = weaponType || 'pistol';
 
-  if (weaponType === 'railgun') {
-    // Long beam line
-    const len = 40;
-    const ex = px + Math.cos(angle) * len;
-    const ez = pz + Math.sin(angle) * len;
-    const mx = (px + ex) / 2, mz = (pz + ez) / 2;
-    const beamGeo = new THREE.PlaneGeometry(len, 0.15);
-    const beamMat = new THREE.MeshBasicMaterial({ color: 0x44ddff, transparent: true, opacity: 0.9, side: THREE.DoubleSide });
-    const beam = new THREE.Mesh(beamGeo, beamMat);
-    beam.position.set(mx, 1.2, mz);
-    beam.rotation.set(-Math.PI / 2, angle, 0);
-    scene.add(beam);
-    effects.push({ mesh: beam, mat: beamMat, life: 0.5, maxLife: 0.5 });
-    // Bright origin flash
-    const flashGeo = new THREE.SphereGeometry(0.5, 8, 8);
-    const flashMat = new THREE.MeshBasicMaterial({ color: 0x88eeff, transparent: true, opacity: 1 });
-    const flash = new THREE.Mesh(flashGeo, flashMat);
-    flash.position.set(fx, 1.2, fz);
-    scene.add(flash);
-    effects.push({ mesh: flash, mat: flashMat, life: 0.15, maxLife: 0.15 });
-    return;
-  }
-
   if (weaponType === 'flamethrower') {
     // Cone of fire particles
     for (let i = 0; i < 8; i++) {
@@ -100,13 +77,31 @@ const DMG_OFFSETS = [
   [-1.8, 0.3], [0.3, -1.5], [1.8, 1.2], [-1, 1.5],
 ];
 
+const CRIT_FONTS = [
+  '700 48px "Bangers"', '700 48px "Permanent Marker"', '700 48px "Bungee"',
+  '700 24px "Press Start 2P"', '700 48px "Creepster"', '700 48px "Russo One"',
+  '700 48px "Black Ops One"', '700 48px "Righteous"', '700 48px "Orbitron"',
+  '700 48px "Alfa Slab One"',
+];
+let critStreak = 0;
+let lastCritTime = 0;
+
 export function showDamageNumber(x, z, dmg, crit) {
   const color = crit ? '#ffff44' : '#ffffff';
   const text = crit ? 'CRIT ' + dmg + '!' : '' + dmg;
   const off = DMG_OFFSETS[dmgSlot % DMG_OFFSETS.length];
   dmgSlot++;
-  spawnFloatingText(x + off[0], z + off[1], text, color, crit ? 4 : 2.5);
-  if (crit) spawnSparks(x, z, 0xffff44, 12);
+  let scale = crit ? 4 : 2.5;
+  let fontOverride = null;
+  if (crit) {
+    const now = performance.now();
+    if (now - lastCritTime < 3000) { critStreak++; } else { critStreak = 1; }
+    lastCritTime = now;
+    scale = 4 + Math.min(critStreak - 1, 6) * 1.5;
+    fontOverride = CRIT_FONTS[Math.floor(Math.random() * CRIT_FONTS.length)];
+    spawnSparks(x, z, 0xffff44, 12);
+  }
+  spawnFloatingText(x + off[0], z + off[1], text, color, scale, fontOverride);
 }
 
 export function showExplosion(x, z, radius) {

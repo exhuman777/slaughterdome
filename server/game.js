@@ -4,7 +4,7 @@ import {
   WAVE_REST_MS, SCALING, ENEMY_DEFS, WALL, DASH, SWORD,
   ARENA_SHRINK_PER_WAVE, ARENA_MIN_RADIUS, ARENA_OUTSIDE_DPS,
   waveEnemyCount, enemyTypesForWave, scaleStat,
-  UPGRADE_DEFS, UPGRADE_TIER_WEIGHTS, WEAPONS, OVERHEAT,
+  UPGRADE_DEFS, UPGRADE_TIER_WEIGHTS, WEAPONS, OVERHEAT, OBSTACLES,
 } from './config.js';
 
 // OBB wall collision -- returns push vector or null
@@ -32,6 +32,18 @@ function pointInWall(px, pz, w, radius) {
   const lx = dx * cos - dz * sin;
   const lz = dx * sin + dz * cos;
   return Math.abs(lx) < WALL.halfWidth + radius && Math.abs(lz) < WALL.halfDepth + radius;
+}
+
+// Circular obstacle collision -- returns push vector or null
+function obstaclePush(ex, ez, ob, entityRadius) {
+  if (ob.type === 'water' && !ob.active) return null;
+  const dx = ex - ob.x, dz = ez - ob.z;
+  const distSq = dx * dx + dz * dz;
+  const minDist = ob.radius + entityRadius;
+  if (distSq >= minDist * minDist) return null;
+  const dist = Math.sqrt(distSq) || 0.01;
+  const overlap = minDist - dist;
+  return { x: (dx / dist) * overlap, z: (dz / dist) * overlap };
 }
 
 let nextEnemyId = 1;
@@ -156,6 +168,11 @@ function updatePlayers(room, dt) {
     // Player-wall collision (OBB)
     for (const [, w] of room.walls) {
       const push = wallPush(p.x, p.z, w, 0.5);
+      if (push) { p.x += push.x; p.z += push.z; }
+    }
+    // Player-obstacle collision
+    for (const ob of room.obstacles) {
+      const push = obstaclePush(p.x, p.z, ob, 0.5);
       if (push) { p.x += push.x; p.z += push.z; }
     }
     // NaN guard
@@ -502,6 +519,11 @@ function updateEnemies(room, dt) {
         w.hp -= e.damage * dt * 0.15;
       }
     }
+    // Push from obstacles
+    for (const ob of room.obstacles) {
+      const push = obstaclePush(e.x, e.z, ob, 0.6);
+      if (push) { e.x += push.x; e.z += push.z; }
+    }
     // NaN guard for enemies
     if (isNaN(e.x) || isNaN(e.z)) { e.x = 0; e.z = 0; }
     const edist = Math.sqrt(e.x * e.x + e.z * e.z);
@@ -527,6 +549,17 @@ function updateProjectiles(room, dt) {
     if (pr.age > (pr.maxAge || 3000) || Math.sqrt(pr.x * pr.x + pr.z * pr.z) > ARENA_RADIUS + 5) {
       room.projectiles.delete(id); continue;
     }
+    // Projectiles blocked by tree obstacles
+    let hitObstacle = false;
+    for (const ob of room.obstacles) {
+      if (ob.type !== 'tree') continue;
+      const odx = pr.x - ob.x, odz = pr.z - ob.z;
+      if (odx * odx + odz * odz < ob.radius * ob.radius) {
+        room.projectiles.delete(id);
+        hitObstacle = true; break;
+      }
+    }
+    if (hitObstacle) continue;
     if (pr.type === 'bullet') {
       // Player bullets hit walls (walls are destructible)
       let hitWall = false;
@@ -639,6 +672,12 @@ function spawnWave(room) {
   const wave = room.wave;
   // Shrink arena each wave
   room.arenaRadius = Math.max(ARENA_MIN_RADIUS, ARENA_RADIUS - (wave - 1) * ARENA_SHRINK_PER_WAVE);
+  // Activate water obstacles from wave 5+
+  if (wave >= OBSTACLES.waterStartWave) {
+    for (const ob of room.obstacles) {
+      if (ob.type === 'water') ob.active = true;
+    }
+  }
   const isBossWave = wave % 5 === 0 && wave > 0;
   const types = enemyTypesForWave(wave);
   const count = waveEnemyCount(wave, room.playerCount);

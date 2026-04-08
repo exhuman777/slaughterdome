@@ -1,7 +1,54 @@
-import { MAX_PLAYERS, MAX_ROOMS, ROOM_CLEANUP_MS, PLAYER, ARENA_RADIUS, WALL, OVERHEAT, DASH, SWORD } from './config.js';
+import { MAX_PLAYERS, MAX_ROOMS, ROOM_CLEANUP_MS, PLAYER, ARENA_RADIUS, WALL, OVERHEAT, DASH, SWORD, OBSTACLES } from './config.js';
 
 let nextRoomId = 1;
 let nextPlayerId = 1;
+
+function generateObstacles() {
+  const obstacles = [];
+  const placed = [];
+  // Trees -- always present
+  for (let i = 0; i < OBSTACLES.treeCount; i++) {
+    for (let attempt = 0; attempt < 30; attempt++) {
+      const angle = Math.random() * Math.PI * 2;
+      const dist = OBSTACLES.treeMinDist + Math.random() * (ARENA_RADIUS - OBSTACLES.treeMinDist - 3);
+      const x = Math.cos(angle) * dist;
+      const z = Math.sin(angle) * dist;
+      let tooClose = false;
+      for (const p of placed) {
+        const dx = x - p.x, dz = z - p.z;
+        if (dx * dx + dz * dz < OBSTACLES.treeSeparation * OBSTACLES.treeSeparation) { tooClose = true; break; }
+      }
+      if (!tooClose) {
+        const ob = { type: 'tree', x, z, radius: OBSTACLES.treeRadius };
+        obstacles.push(ob);
+        placed.push(ob);
+        break;
+      }
+    }
+  }
+  // Water pools -- added later via wave check
+  for (let i = 0; i < OBSTACLES.waterCount; i++) {
+    for (let attempt = 0; attempt < 30; attempt++) {
+      const angle = Math.random() * Math.PI * 2;
+      const dist = OBSTACLES.waterMinDist + Math.random() * (ARENA_RADIUS - OBSTACLES.waterMinDist - 5);
+      const x = Math.cos(angle) * dist;
+      const z = Math.sin(angle) * dist;
+      let tooClose = false;
+      for (const p of placed) {
+        const minSep = p.type === 'water' ? OBSTACLES.waterSeparation : OBSTACLES.treeSeparation;
+        const dx = x - p.x, dz = z - p.z;
+        if (dx * dx + dz * dz < minSep * minSep) { tooClose = true; break; }
+      }
+      if (!tooClose) {
+        const ob = { type: 'water', x, z, radius: OBSTACLES.waterRadius, active: false };
+        obstacles.push(ob);
+        placed.push(ob);
+        break;
+      }
+    }
+  }
+  return obstacles;
+}
 
 export class Room {
   constructor() {
@@ -20,6 +67,7 @@ export class Room {
     this.tick = 0;
     this.waveTimer = 0;
     this.cleanupTimer = null;
+    this.obstacles = generateObstacles();
   }
 
   get playerCount() { return this.players.size; }
@@ -121,9 +169,12 @@ export class Room {
     for (const [, w] of this.walls) {
       walls.push({ id: w.id, pos: [w.x, 0, w.z], angle: w.angle, hp: w.hp, maxHp: w.maxHp });
     }
+    const obstacles = this.obstacles
+      .filter(o => o.type === 'tree' || o.active)
+      .map(o => ({ type: o.type, pos: [Math.round(o.x * 100) / 100, 0, Math.round(o.z * 100) / 100], radius: o.radius }));
     return {
       t: 'state', tick: this.tick,
-      players, enemies, pickups, projectiles, walls,
+      players, enemies, pickups, projectiles, walls, obstacles,
       wave: this.wave, score: this.score, combo: this.combo, phase: this.state,
       arenaRadius: this.arenaRadius, waveTimer: this.waveTimer,
       playerCount: this.playerCount,

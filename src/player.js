@@ -7,8 +7,8 @@ let localId = null;
 
 // Dash afterimage system
 const afterimages = [];
-const afterimageGeo = new THREE.BoxGeometry(1.0, 1.8, 0.7);
-const AFTERIMAGE_INTERVAL = 0.03;
+const afterimageGeo = new THREE.BoxGeometry(1.2, 2.0, 0.8);
+const AFTERIMAGE_INTERVAL = 0.025;
 
 export function createPlayerMesh(id, index) {
   const color = PLAYER_COLORS[index % PLAYER_COLORS.length];
@@ -101,13 +101,22 @@ export function setPlayerDashing(id, dashing) {
     pm.afterimageTimer = (pm.afterimageTimer || 0) - 0.016;
     if (pm.afterimageTimer <= 0) {
       pm.afterimageTimer = AFTERIMAGE_INTERVAL;
-      const mat = new THREE.MeshBasicMaterial({ color: pm.color, transparent: true, opacity: 0.5 });
+      // Bright cyan-white ghost
+      const mat = new THREE.MeshBasicMaterial({ color: 0x88ddff, transparent: true, opacity: 0.7 });
       const ghost = new THREE.Mesh(afterimageGeo, mat);
       ghost.position.copy(pm.group.position);
       ghost.position.y += 1.2;
       ghost.rotation.y = pm.group.rotation.y;
       scene.add(ghost);
-      afterimages.push({ mesh: ghost, mat, life: 0.2 });
+      afterimages.push({ mesh: ghost, mat, life: 0.25 });
+      // Ground streak
+      const trailMat = new THREE.MeshBasicMaterial({ color: pm.color, transparent: true, opacity: 0.6, side: THREE.DoubleSide });
+      const trailGeo = new THREE.PlaneGeometry(0.8, 0.8);
+      trailGeo.rotateX(-Math.PI / 2);
+      const trail = new THREE.Mesh(trailGeo, trailMat);
+      trail.position.set(pm.group.position.x, 0.05, pm.group.position.z);
+      scene.add(trail);
+      afterimages.push({ mesh: trail, mat: trailMat, life: 0.4, disposeGeo: true });
     }
   } else {
     pm.afterimageTimer = 0;
@@ -123,11 +132,13 @@ export function updateAfterimages(dt) {
   for (let i = afterimages.length - 1; i >= 0; i--) {
     const a = afterimages[i];
     a.life -= dt;
-    a.mat.opacity = Math.max(0, a.life / 0.2) * 0.5;
-    a.mesh.scale.y *= 0.95;
+    const maxLife = a.disposeGeo ? 0.4 : 0.25;
+    a.mat.opacity = Math.max(0, a.life / maxLife) * 0.7;
+    if (!a.disposeGeo) a.mesh.scale.y *= 0.94;
     if (a.life <= 0) {
       scene.remove(a.mesh);
       a.mat.dispose();
+      if (a.disposeGeo) a.mesh.geometry.dispose();
       afterimages.splice(i, 1);
     }
   }

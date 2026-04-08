@@ -71,6 +71,18 @@ export const SWORD = {
   knockback: 3,
 };
 
+export const OBSTACLES = {
+  treeCount: 10,
+  treeRadius: 1.5,
+  treeMinDist: 8,
+  treeSeparation: 6,
+  waterStartWave: 5,
+  waterCount: 2,
+  waterRadius: 3.5,
+  waterMinDist: 12,
+  waterSeparation: 10,
+};
+
 export const ARENA_SHRINK_PER_WAVE = 1.5;
 export const ARENA_MIN_RADIUS = 15;
 export const ARENA_OUTSIDE_DPS = 5;
@@ -110,7 +122,6 @@ export const UPGRADE_DEFS = {
   magnet:        { name: 'MAGNET',        desc: '+3 pickup attract range',     tier: 'common',  category: 'passive' },
   combo_decay:   { name: 'MOMENTUM',      desc: '+500ms combo decay time',     tier: 'rare',    category: 'passive' },
   shotgun:       { name: 'SHOTGUN',       desc: '5-bullet spread, slower',     tier: 'epic',    category: 'weapon_swap' },
-  railgun:       { name: 'RAILGUN',       desc: 'Piercing beam, slow fire',    tier: 'epic',    category: 'weapon_swap' },
   flamethrower:  { name: 'FLAMETHROWER',  desc: 'Short range spray, fast',     tier: 'epic',    category: 'weapon_swap' },
 };
 
@@ -129,7 +140,6 @@ export const OVERHEAT = {
 export const WEAPONS = {
   pistol:       { bullets: 1, spread: 0,   cooldown: 150, damageMult: 1.0, speed: 35, pierce: 0, range: 3000 },
   shotgun:      { bullets: 5, spread: 0.3, cooldown: 400, damageMult: 0.7, speed: 25, pierce: 0, range: 1500 },
-  railgun:      { bullets: 1, spread: 0,   cooldown: 400, damageMult: 3.0, speed: 50, pierce: 999, range: 3000 },
   flamethrower: { bullets: 3, spread: 0.4, cooldown: 80,  damageMult: 0.3, speed: 15, pierce: 0, range: 500 },
 };
 
