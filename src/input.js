@@ -49,6 +49,15 @@ document.addEventListener('contextmenu', e => e.preventDefault());
 
 export function isWallMode() { return wallMode; }
 export function exitWallMode() { wallMode = false; }
+export function resetInput() {
+  wallMode = false;
+  wallTriggeredFrames = 0;
+  dashTriggered = false;
+  swordTriggered = false;
+  for (const k in keys) keys[k] = false;
+  mouse.left = false;
+  mouse.right = false;
+}
 
 export function getInput() {
   let dx = 0, dz = 0;

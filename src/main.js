@@ -8,7 +8,7 @@ import * as THREE from 'https://esm.sh/three@0.162.0';
 import { scene } from './renderer.js';
 import { showGunShot, showSpecialAttack, showDamageNumber, showExplosion, showHitImpact, updateCombatVisuals, showSwordSlash } from './combat.js';
 import { playHit, playKill, playExplosion, playWaveStart, playBossSpawn, playPickup, playDeath, playCombo, resumeAudio, playShot, playWallPlace, playDash, playWallDestroy, playWaveClear, playSword } from './audio.js';
-import { getInput, getMobileInput, isMobile, setupMobileControls, isWallMode, exitWallMode } from './input.js';
+import { getInput, getMobileInput, isMobile, setupMobileControls, isWallMode, exitWallMode, resetInput } from './input.js';
 import { connect, sendInput, sendPing, getState, getMyId, getPing, drainEvents, disconnect } from './network.js';
 import { showTitle, showHUD, showGameOver, updateHUD, showCombo, updatePing, getPlayerName, updateUpgradeDisplay, updateWeaponHUD, showControlsHint, hideControlsHint, updateCountdown, updateAbilities, updateInfo, updatePlayers, showYouDied, hideYouDied, updateWallMode } from './ui.js';
 import { showUpgradeShop, hideUpgradeShop } from './upgrades.js';
@@ -101,7 +101,7 @@ function quitToMenu() {
   hideUpgradeShop();
   hideControlsHint();
   hideYouDied();
-  exitWallMode();
+  resetInput();
   updateWallMode(false);
   ghostWall.visible = false;
   removeAllEnemies();
@@ -125,6 +125,7 @@ async function startGame() {
   const name = getPlayerName();
   try {
     await connect(name);
+    resetInput();
     gameActive = true;
     showHUD();
     showControlsHint();
@@ -608,7 +609,7 @@ function handleEvent(ev) {
       hideUpgradeShop();
       hideControlsHint();
       hideYouDied();
-      exitWallMode();
+      resetInput();
       updateWallMode(false);
       ghostWall.visible = false;
       for (const c of corpses) { scene.remove(c); c.material.dispose(); }
