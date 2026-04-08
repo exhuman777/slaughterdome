@@ -166,6 +166,11 @@ function gameLoop() {
 
   if (gameActive) {
     const input = isMobile() ? getMobileInput() : getInput();
+    // Mobile: offset aim by player position so aim direction is relative
+    if (input.mobileAimRelative && hasPrediction) {
+      input.aimX += predictedX;
+      input.aimZ += predictedZ;
+    }
     lastInput = input;
     sendInput(input);
 
@@ -202,6 +207,7 @@ function gameLoop() {
 
         if (predDashTimer > 0) {
           predDashTimer -= dtMs;
+          if (predDashTimer < 0) predDashTimer = 0;
           predictedX += predDashDirX * DASH_SPEED * dt;
           predictedZ += predDashDirZ * DASH_SPEED * dt;
         } else {
@@ -370,7 +376,7 @@ function processState(state, dt) {
         setPlayerRotation(p.id, Math.atan2(lastInput.aimZ - p.pos[2], lastInput.aimX - p.pos[0]));
       }
     }
-    setPlayerDashing(p.id, p.id === myId ? predDashTimer > 0 : p.dashing);
+    setPlayerDashing(p.id, p.id === myId ? (predDashTimer > 0 || p.dashing) : p.dashing);
   }
 
   const serverEnemyIds = new Set(state.enemies.map(e => e.id));
