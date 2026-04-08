@@ -52,20 +52,28 @@
     border-bottom: 1px solid #222; padding-bottom: 6px;
   }
 
-  .controls-grid {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px;
-    margin-bottom: 28px;
+  .lore-block {
+    border-left: 2px solid #ff4444; padding: 12px 16px; margin-bottom: 28px;
+    background: rgba(255,68,68,0.03);
   }
-  .ctrl-row { display: flex; align-items: center; gap: 10px; padding: 4px 0; }
-  .ctrl-key {
-    background: #1a1816; border: 1px solid #444; color: #e6993a;
-    padding: 3px 8px; font-size: 11px; font-weight: 700;
-    min-width: 50px; text-align: center; flex-shrink: 0;
+  .lore-block p { color: #999; font-size: 12px; line-height: 1.8; margin-bottom: 8px; }
+  .lore-block p:last-child { margin-bottom: 0; }
+  .lore-sm { border-left-color: #e6993a; background: rgba(230,153,58,0.03); }
+  .lore-sm p { color: #888; }
+
+  .controls-section { margin-bottom: 28px; }
+  .ctrl-group { margin-bottom: 16px; }
+  .ctrl-group-title { font-size: 10px; color: #e6993a; letter-spacing: 3px; margin-bottom: 8px; font-weight: 700; }
+  .ctrl-row-lg { display: flex; align-items: flex-start; gap: 12px; padding: 6px 0; border-bottom: 1px solid #1a1816; }
+  .ctrl-key-lg {
+    background: #1a1816; border: 1px solid #555; color: #e6993a;
+    padding: 5px 12px; font-size: 13px; font-weight: 700;
+    min-width: 64px; text-align: center; flex-shrink: 0;
   }
-  .ctrl-desc { font-size: 11px; color: #888; }
+  .ctrl-desc-lg { font-size: 13px; color: #aaa; line-height: 1.5; padding-top: 3px; }
 
   .weapons-row {
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
     margin-bottom: 28px;
   }
   .wep-box {
@@ -159,38 +167,53 @@
     <div id="title-inner">
       <h1>SLAUGHTERDOME</h1>
       <div class="tagline">Wave Survival Arena</div>
-      <div class="desc">
-        Survive endless waves of enemies in a shrinking arena. Kill to build combos,
-        collect upgrades between waves, and push for the highest score.
-        Solo or multiplayer. No mercy.
+
+      <div class="lore-block">
+        <p>The year is 2089. The old world burned in the Collapse -- wars, plagues, resource death. What rose from the ash wasn't civilization. It was spectacle.</p>
+        <p>THE DOME is the last arena standing. A circular kill-floor ringed by concrete and razor wire, broadcast to every surviving settlement on the net. Trees have reclaimed the edges. Toxic water pools seep through cracked earth as the rounds progress. The walls close in.</p>
+        <p>You are a condemned fighter. Your crimes don't matter. Your name doesn't matter. Only your kill count. Survive enough waves and the Dome grants you something no one else has -- another day alive.</p>
+        <p style="color:#ff4444;font-weight:700;">No one has made it past wave 30.</p>
       </div>
 
       <div class="feature-grid">
-        <div class="feature-box"><div class="f-val">4</div><div class="f-label">Weapons</div></div>
-        <div class="feature-box"><div class="f-val">17</div><div class="f-label">Upgrades</div></div>
+        <div class="feature-box"><div class="f-val">3</div><div class="f-label">Weapons</div></div>
+        <div class="feature-box"><div class="f-val">16</div><div class="f-label">Upgrades</div></div>
         <div class="feature-box"><div class="f-val">8</div><div class="f-label">Enemy Types</div></div>
         <div class="feature-box"><div class="f-val">INF</div><div class="f-label">Waves</div></div>
       </div>
 
-      <div class="section-label">Controls</div>
-      <div class="controls-grid">
-        <div class="ctrl-row"><span class="ctrl-key">WASD</span><span class="ctrl-desc">Move</span></div>
-        <div class="ctrl-row"><span class="ctrl-key">MOUSE</span><span class="ctrl-desc">Aim</span></div>
-        <div class="ctrl-row"><span class="ctrl-key">LMB</span><span class="ctrl-desc">Shoot</span></div>
-        <div class="ctrl-row"><span class="ctrl-key">RMB</span><span class="ctrl-desc">AoE blast</span></div>
-        <div class="ctrl-row"><span class="ctrl-key">SHIFT</span><span class="ctrl-desc">Dash (chain x3)</span></div>
-        <div class="ctrl-row"><span class="ctrl-key">Q</span><span class="ctrl-desc">Sword (3-hit combo)</span></div>
-        <div class="ctrl-row"><span class="ctrl-key">E</span><span class="ctrl-desc">Wall mode (click to place)</span></div>
-        <div class="ctrl-row"><span class="ctrl-key">ESC</span><span class="ctrl-desc">Exit wall mode</span></div>
-        <div class="ctrl-row"><span class="ctrl-key">1 2 3</span><span class="ctrl-desc">Pick upgrade</span></div>
+      <div class="section-label">How To Fight</div>
+      <div class="controls-section">
+        <div class="ctrl-group">
+          <div class="ctrl-group-title">MOVEMENT</div>
+          <div class="ctrl-row-lg"><span class="ctrl-key-lg">WASD</span><span class="ctrl-desc-lg">Move</span></div>
+          <div class="ctrl-row-lg"><span class="ctrl-key-lg">SHIFT</span><span class="ctrl-desc-lg">Dash -- 3 charges, chain within 0.3s, grants invulnerability</span></div>
+        </div>
+        <div class="ctrl-group">
+          <div class="ctrl-group-title">COMBAT</div>
+          <div class="ctrl-row-lg"><span class="ctrl-key-lg">LMB</span><span class="ctrl-desc-lg">Shoot -- hold to fire, weapon overheats</span></div>
+          <div class="ctrl-row-lg"><span class="ctrl-key-lg">RMB</span><span class="ctrl-desc-lg">Shockwave -- AoE blast that knocks enemies back</span></div>
+          <div class="ctrl-row-lg"><span class="ctrl-key-lg">Q</span><span class="ctrl-desc-lg">Sword -- 3-hit melee combo, high damage up close</span></div>
+          <div class="ctrl-row-lg"><span class="ctrl-key-lg">MOUSE</span><span class="ctrl-desc-lg">Aim cursor -- all attacks go toward cursor</span></div>
+        </div>
+        <div class="ctrl-group">
+          <div class="ctrl-group-title">TACTICS</div>
+          <div class="ctrl-row-lg"><span class="ctrl-key-lg">E</span><span class="ctrl-desc-lg">Wall mode -- toggle on, then click to place barricades</span></div>
+          <div class="ctrl-row-lg"><span class="ctrl-key-lg">ESC</span><span class="ctrl-desc-lg">Exit wall mode / quit to menu</span></div>
+          <div class="ctrl-row-lg"><span class="ctrl-key-lg">1 2 3</span><span class="ctrl-desc-lg">Pick upgrade between waves</span></div>
+        </div>
       </div>
 
-      <div class="section-label">Weapons</div>
+      <div class="section-label">Arsenal</div>
       <div class="weapons-row">
-        <div class="wep-box"><div class="wep-name">PISTOL</div><div class="wep-stat">Balanced<br>Fast fire</div></div>
-        <div class="wep-box"><div class="wep-name">SHOTGUN</div><div class="wep-stat">5-bullet spread<br>High damage</div></div>
-        <div class="wep-box"><div class="wep-name">RAILGUN</div><div class="wep-stat">Piercing beam<br>Long range</div></div>
-        <div class="wep-box"><div class="wep-name">FLAME</div><div class="wep-stat">Short range spray<br>Rapid fire</div></div>
+        <div class="wep-box"><div class="wep-name">PISTOL</div><div class="wep-stat">Balanced<br>Fast fire<br>Default weapon</div></div>
+        <div class="wep-box"><div class="wep-name">SHOTGUN</div><div class="wep-stat">5-bullet spread<br>High burst damage<br>Upgrade to unlock</div></div>
+        <div class="wep-box"><div class="wep-name">FLAMETHROWER</div><div class="wep-stat">Short range spray<br>Rapid fire<br>Upgrade to unlock</div></div>
+      </div>
+
+      <div class="section-label">The Arena</div>
+      <div class="lore-block lore-sm">
+        <p>The Dome shrinks every wave. Trees block movement and bullets. Toxic water pools appear from wave 5, cutting off escape routes. Place walls to funnel enemies. Build combos to unlock rare upgrades. Up to 3 fighters enter together -- cooperate or die alone.</p>
       </div>
 
       <div class="section-label">Leaderboard</div>
