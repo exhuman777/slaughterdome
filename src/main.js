@@ -62,7 +62,7 @@ let predictedX = 0, predictedZ = 0;
 let hasPrediction = false;
 let predDashTimer = 0, predDashDirX = 0, predDashDirZ = 0;
 const DASH_SPEED = 30;
-const DASH_DURATION = 250;
+const DASH_DURATION = 200;
 let currentArenaRadius = 40;
 let predVelX = 0, predVelZ = 0;
 let prevInputDx = 0, prevInputDz = 0;

@@ -34,7 +34,7 @@ document.addEventListener('mousemove', e => {
 document.addEventListener('mousedown', e => {
   if (e.button === 0) {
     mouse.left = true;
-    if (wallMode) wallTriggeredFrames = 10;
+    if (wallMode) wallTriggeredFrames = 20;
   }
   if (e.button === 2) {
     mouse.right = true;
