@@ -177,7 +177,7 @@ export function updateAbilities(wallCharges, specialCd, dashCharges, swordCd) {
   for (let i = 0; i < 3; i++) dashPips += i < dashCharges ? '<span style="color:#e6993a">|</span>' : '<span style="color:#333">|</span>';
   abilitiesEl.innerHTML =
     '<div class="ab-row"><span class="ab-key">[Q]</span> SWORD ' + (swordReady ? '<span class="ab-val">READY</span>' : '<span class="ab-cd">' + (swordCd / 1000).toFixed(1) + 's</span>') + '</div>' +
-    '<div class="ab-row"><span class="ab-key">[E]</span> WALL <span class="ab-val" style="color:' + wallColor + '">' + wallCharges + '/8</span></div>' +
+    '<div class="ab-row"><span class="ab-key">[E]</span> WALL <span class="ab-val" style="color:' + wallColor + '">' + wallCharges + '/5</span></div>' +
     '<div class="ab-row"><span class="ab-key">[RMB]</span> AoE ' + (specialReady ? '<span class="ab-val">READY</span>' : '<span class="ab-cd">' + Math.ceil(specialCd / 1000) + 's</span>') + '</div>' +
     '<div class="ab-row"><span class="ab-key">[SHIFT]</span> DASH ' + dashPips + '</div>';
 }

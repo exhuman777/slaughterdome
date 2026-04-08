@@ -44,9 +44,9 @@ export const PICKUP_DROP_COMBO_BONUS = 0.02;
 
 export const WALL = {
   hp: 100,
-  charges: 8,
-  cooldown: 6000,
-  placeCooldown: 250,
+  charges: 5,
+  cooldown: 8000,
+  placeCooldown: 350,
   halfWidth: 2.0,
   halfDepth: 0.4,
   lifetime: 45000,

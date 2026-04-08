@@ -257,7 +257,7 @@ function gameLoop() {
         }
 
         // Wall placement preview ghost -- only in wall mode
-        const wallCharges = me.wallCharges !== undefined ? me.wallCharges : 8;
+        const wallCharges = me.wallCharges !== undefined ? me.wallCharges : 5;
         const inWallMode = isWallMode();
         updateWallMode(inWallMode);
         if (inWallMode && wallCharges > 0) {
@@ -435,7 +435,7 @@ function processState(state, dt) {
     const dashFill = document.getElementById('dash-fill');
     if (dashFill) dashFill.style.width = (dashCharges / 3 * 100) + '%';
     updateWeaponHUD(me.weapon, me.overheated, me.heatPct || 0);
-    updateAbilities(me.wallCharges !== undefined ? me.wallCharges : 8, me.specialCd || 0, dashCharges, me.swordCd || 0);
+    updateAbilities(me.wallCharges !== undefined ? me.wallCharges : 5, me.specialCd || 0, dashCharges, me.swordCd || 0);
     updateInfo(me.kills || 0);
     // Show YOU DIED when player dies but game continues
     if (!me.alive && wasAlive) {
