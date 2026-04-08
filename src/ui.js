@@ -16,6 +16,32 @@ const COMBO_NAMES = { 5: 'RAMPAGE', 10: 'KILLING SPREE', 15: 'DOMINATING', 20: '
 export function showTitle() {
   title.style.display = 'block'; hud.style.display = 'none'; gameover.style.display = 'none';
   hideAbilities(); hideInfo(); hidePlayers();
+  fetchLeaderboard();
+}
+
+function fetchLeaderboard() {
+  const lbEl = document.getElementById('leaderboard');
+  if (!lbEl) return;
+  const wsUrl = window.SLAUGHTERDOME_WS || (
+    location.hostname === 'localhost'
+      ? 'http://localhost:3001'
+      : 'https://slaughterdome-server-production.up.railway.app'
+  );
+  const httpUrl = wsUrl.replace('wss://', 'https://').replace('ws://', 'http://');
+  fetch(httpUrl + '/leaderboard').then(r => r.json()).then(lb => {
+    if (!lb.length) { lbEl.innerHTML = '<div class="lb-empty">No scores yet. Be the first.</div>'; return; }
+    lbEl.innerHTML = lb.slice(0, 10).map((e, i) =>
+      '<div class="lb-row">' +
+        '<span class="lb-rank">#' + (i + 1) + '</span>' +
+        '<span class="lb-name">' + (e.name || 'Unknown') + '</span>' +
+        '<span class="lb-kills">' + (e.kills || 0) + 'K</span>' +
+        '<span class="lb-wave">W' + (e.wave || 0) + '</span>' +
+        '<span class="lb-score">' + (e.score || 0) + '</span>' +
+      '</div>'
+    ).join('');
+  }).catch(() => {
+    lbEl.innerHTML = '<div class="lb-empty">Leaderboard unavailable</div>';
+  });
 }
 
 export function showHUD() {
@@ -32,7 +58,8 @@ export function showGameOver(wave, score, players) {
   if (Array.isArray(players)) {
     const sorted = [...players].sort((a, b) => b.kills - a.kills);
     goKills.innerHTML = sorted.map(p =>
-      '<div class="go-player"><span class="go-name">' + (p.name || p.id) + '</span> -- <span class="go-kills">' + p.kills + ' KILLS</span></div>'
+      '<div class="go-player"><span class="go-name">' + (p.name || p.id) + '</span> -- <span class="go-kills">' + p.kills + ' KILLS</span>' +
+      (p.shotsFired !== undefined ? ' <span class="go-shots">' + p.shotsFired + ' SHOTS</span>' : '') + '</div>'
     ).join('');
   } else if (players && typeof players === 'object') {
     // Legacy format fallback
@@ -141,15 +168,18 @@ export function hideYouDied() { if (youDiedEl) youDiedEl.style.display = 'none';
 function showAbilities() { if (abilitiesEl) abilitiesEl.style.display = 'block'; }
 function hideAbilities() { if (abilitiesEl) abilitiesEl.style.display = 'none'; }
 
-export function updateAbilities(wallCharges, specialCd, dashCd) {
+export function updateAbilities(wallCharges, specialCd, dashCharges, swordCd) {
   if (!abilitiesEl) return;
   const wallColor = wallCharges > 0 ? '#e6993a' : '#ff4444';
   const specialReady = specialCd <= 0;
-  const dashReady = dashCd <= 0;
+  const swordReady = swordCd <= 0;
+  let dashPips = '';
+  for (let i = 0; i < 3; i++) dashPips += i < dashCharges ? '<span style="color:#e6993a">|</span>' : '<span style="color:#333">|</span>';
   abilitiesEl.innerHTML =
+    '<div class="ab-row"><span class="ab-key">[Q]</span> SWORD ' + (swordReady ? '<span class="ab-val">READY</span>' : '<span class="ab-cd">' + (swordCd / 1000).toFixed(1) + 's</span>') + '</div>' +
     '<div class="ab-row"><span class="ab-key">[E]</span> WALL <span class="ab-val" style="color:' + wallColor + '">' + wallCharges + '/8</span></div>' +
     '<div class="ab-row"><span class="ab-key">[RMB]</span> AoE ' + (specialReady ? '<span class="ab-val">READY</span>' : '<span class="ab-cd">' + Math.ceil(specialCd / 1000) + 's</span>') + '</div>' +
-    '<div class="ab-row"><span class="ab-key">[SHIFT]</span> DASH ' + (dashReady ? '<span class="ab-val">READY</span>' : '<span class="ab-cd">' + ((dashCd / 1000).toFixed(1)) + 's</span>') + '</div>';
+    '<div class="ab-row"><span class="ab-key">[SHIFT]</span> DASH ' + dashPips + '</div>';
 }
 
 export function updateWallMode(active) {

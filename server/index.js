@@ -1,7 +1,32 @@
 import { WebSocketServer } from 'ws';
 import http from 'http';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { RoomManager } from './room.js';
 import { startGameLoop, applyUpgrade } from './game.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const LEADERBOARD_FILE = path.join(__dirname, 'leaderboard.json');
+const MAX_LEADERBOARD = 20;
+
+function loadLeaderboard() {
+  try { return JSON.parse(fs.readFileSync(LEADERBOARD_FILE, 'utf8')); }
+  catch { return []; }
+}
+
+function saveLeaderboard(lb) {
+  fs.writeFileSync(LEADERBOARD_FILE, JSON.stringify(lb));
+}
+
+function addScore(name, score, wave, kills, shotsFired) {
+  const lb = loadLeaderboard();
+  lb.push({ name, score, wave, kills, shotsFired, date: Date.now() });
+  lb.sort((a, b) => b.score - a.score);
+  if (lb.length > MAX_LEADERBOARD) lb.length = MAX_LEADERBOARD;
+  saveLeaderboard(lb);
+  return lb;
+}
 
 const PORT = process.env.PORT || 3001;
 const roomManager = new RoomManager();
@@ -12,6 +37,11 @@ const server = http.createServer((req, res) => {
   if (req.url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ status: 'ok', rooms: roomManager.activeRooms.length }));
+    return;
+  }
+  if (req.url === '/leaderboard') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(loadLeaderboard()));
     return;
   }
   res.writeHead(404);
@@ -47,6 +77,7 @@ wss.on('connection', (ws) => {
       player.input.aimZ = Number(msg.aim?.[2]) || 0;
       player.input.wall = !!msg.w;
       player.input.dash = !!msg.dash;
+      player.input.sword = !!msg.sw;
     }
 
     if (msg.t === 'ping') {
@@ -67,7 +98,7 @@ wss.on('connection', (ws) => {
   });
 });
 
-startGameLoop(roomManager);
+startGameLoop(roomManager, addScore);
 
 server.listen(PORT, () => {
   console.log(`SLAUGHTERDOME server on port ${PORT}`);

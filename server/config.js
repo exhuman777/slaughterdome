@@ -1,7 +1,7 @@
 export const TICK_RATE = 20;
 export const TICK_MS = 1000 / TICK_RATE;
 export const ARENA_RADIUS = 40;
-export const MAX_PLAYERS = 2;
+export const MAX_PLAYERS = 3;
 export const MAX_ROOMS = 3;
 export const GRACE_PERIOD_MS = 5000;
 export const WAVE_REST_MS = 5000;
@@ -43,19 +43,32 @@ export const PICKUP_DROP_BASE = 0.15;
 export const PICKUP_DROP_COMBO_BONUS = 0.02;
 
 export const WALL = {
-  hp: 250,
+  hp: 100,
   charges: 8,
   cooldown: 6000,
   placeCooldown: 250,
-  collisionRadius: 2.5,
+  halfWidth: 2.0,
+  halfDepth: 0.4,
   lifetime: 45000,
 };
 
 export const DASH = {
   speed: 30,
-  duration: 250,
-  cooldown: 2000,
+  duration: 200,
+  charges: 3,
+  chainWindow: 300,
   iframes: 150,
+  rechargeRate: 1500,
+};
+
+export const SWORD = {
+  damage: 25,
+  range: 3.0,
+  arc: 1.8,
+  cooldown: 250,
+  comboPause: 700,
+  comboWindow: 400,
+  knockback: 3,
 };
 
 export const ARENA_SHRINK_PER_WAVE = 1.5;
@@ -91,7 +104,7 @@ export const UPGRADE_DEFS = {
   dash_cooldown: { name: 'QUICK DASH',    desc: '-300ms dash cooldown',        tier: 'rare',    category: 'movement' },
   dash_distance: { name: 'LONG DASH',     desc: '+20% dash speed',             tier: 'common',  category: 'movement' },
   max_hp:        { name: 'VITALITY',      desc: '+20 max HP',                  tier: 'common',  category: 'defense' },
-  wall_hp:       { name: 'FORTIFY',       desc: '+30 wall HP',                 tier: 'common',  category: 'defense' },
+  wall_hp:       { name: 'FORTIFY',       desc: '+50 wall HP',                 tier: 'common',  category: 'defense' },
   thorns:        { name: 'THORNS',        desc: '5 contact dmg to enemies',    tier: 'rare',    category: 'defense' },
   lifesteal:     { name: 'VAMPIRISM',     desc: 'Heal 3% of damage dealt',     tier: 'epic',    category: 'passive' },
   magnet:        { name: 'MAGNET',        desc: '+3 pickup attract range',     tier: 'common',  category: 'passive' },

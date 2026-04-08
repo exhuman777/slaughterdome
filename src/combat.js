@@ -121,6 +121,21 @@ export function showExplosion(x, z, radius) {
   effects.push({ mesh, mat, life: 0.3, maxLife: 0.3, expandRate: 5 });
 }
 
+export function showSwordSlash(x, z, angle, combo) {
+  const arcAngle = 1.8;
+  const radius = 3;
+  const geo = new THREE.RingGeometry(0.5, radius, 16, 1, angle - arcAngle / 2, arcAngle);
+  geo.rotateX(-Math.PI / 2);
+  const colors = [0xffffff, 0xffcc44, 0xff4444];
+  const color = colors[combo] || 0xffffff;
+  const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.8, side: THREE.DoubleSide });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(x, 0.8, z);
+  scene.add(mesh);
+  effects.push({ mesh, mat, life: 0.2, maxLife: 0.2, disposeGeo: true });
+  spawnSparks(x + Math.cos(angle) * 1.5, z + Math.sin(angle) * 1.5, color, 4);
+}
+
 export function showHitImpact(x, z) {
   spawnSparks(x, z, 0xffffff, 8);
 }
@@ -138,6 +153,7 @@ export function updateCombatVisuals(dt) {
     if (e.life <= 0) {
       scene.remove(e.mesh);
       e.mat.dispose();
+      if (e.disposeGeo) e.mesh.geometry.dispose();
       effects.splice(i, 1);
     }
   }

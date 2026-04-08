@@ -5,6 +5,11 @@ const PLAYER_COLORS = [0x44aaff, 0xff5555, 0x55ff55, 0xffff55];
 const playerMeshes = new Map();
 let localId = null;
 
+// Dash afterimage system
+const afterimages = [];
+const afterimageGeo = new THREE.BoxGeometry(1.0, 1.8, 0.7);
+const AFTERIMAGE_INTERVAL = 0.03;
+
 export function createPlayerMesh(id, index) {
   const color = PLAYER_COLORS[index % PLAYER_COLORS.length];
   const mat = new THREE.MeshStandardMaterial({
@@ -92,12 +97,39 @@ export function setPlayerDashing(id, dashing) {
   if (!pm) return;
   if (dashing) {
     pm.group.scale.set(0.8, 1.2, 1.0);
+    // Spawn afterimage
+    pm.afterimageTimer = (pm.afterimageTimer || 0) - 0.016;
+    if (pm.afterimageTimer <= 0) {
+      pm.afterimageTimer = AFTERIMAGE_INTERVAL;
+      const mat = new THREE.MeshBasicMaterial({ color: pm.color, transparent: true, opacity: 0.5 });
+      const ghost = new THREE.Mesh(afterimageGeo, mat);
+      ghost.position.copy(pm.group.position);
+      ghost.position.y += 1.2;
+      ghost.rotation.y = pm.group.rotation.y;
+      scene.add(ghost);
+      afterimages.push({ mesh: ghost, mat, life: 0.2 });
+    }
   } else {
+    pm.afterimageTimer = 0;
     pm.group.scale.set(
       pm.group.scale.x + (1 - pm.group.scale.x) * 0.3,
       pm.group.scale.y + (1 - pm.group.scale.y) * 0.3,
       pm.group.scale.z + (1 - pm.group.scale.z) * 0.3
     );
+  }
+}
+
+export function updateAfterimages(dt) {
+  for (let i = afterimages.length - 1; i >= 0; i--) {
+    const a = afterimages[i];
+    a.life -= dt;
+    a.mat.opacity = Math.max(0, a.life / 0.2) * 0.5;
+    a.mesh.scale.y *= 0.95;
+    if (a.life <= 0) {
+      scene.remove(a.mesh);
+      a.mat.dispose();
+      afterimages.splice(i, 1);
+    }
   }
 }
 

@@ -1,15 +1,15 @@
 import { initRenderer, render, clock, updateCamera, setCamDt } from './renderer.js';
 import { createArena, setBiome, updateBiome, updateArenaRadius } from './arena.js';
-import { createPlayerMesh, updatePlayerMesh, setPlayerRotation, setPlayerDashing, removePlayerMesh, markLocalPlayer, flashPlayer } from './player.js';
+import { createPlayerMesh, updatePlayerMesh, setPlayerRotation, setPlayerDashing, removePlayerMesh, markLocalPlayer, flashPlayer, updateAfterimages } from './player.js';
 import { createEnemyMesh, updateEnemyMesh, flashEnemy, removeEnemyMesh, removeAllEnemies, updateDyingEnemies } from './enemy.js';
 import { updatePickups as updatePickupMeshes, syncPickups } from './pickups.js';
-import { updateParticles, spawnKillParticles, spawnSparks, spawnBloodDrops, spawnDustPuff, spawnSpeedTrail, spawnFloatingText } from './particles.js';
+import { updateParticles, spawnKillParticles, spawnSparks, spawnBloodDrops, spawnDustPuff, spawnSpeedTrail, spawnFloatingText, spawnGoreChunks } from './particles.js';
 import * as THREE from 'https://esm.sh/three@0.162.0';
 import { scene } from './renderer.js';
-import { showGunShot, showSpecialAttack, showDamageNumber, showExplosion, showHitImpact, updateCombatVisuals } from './combat.js';
-import { playHit, playKill, playExplosion, playWaveStart, playBossSpawn, playPickup, playDeath, playCombo, resumeAudio, playShot, playWallPlace, playDash, playWallDestroy, playWaveClear } from './audio.js';
+import { showGunShot, showSpecialAttack, showDamageNumber, showExplosion, showHitImpact, updateCombatVisuals, showSwordSlash } from './combat.js';
+import { playHit, playKill, playExplosion, playWaveStart, playBossSpawn, playPickup, playDeath, playCombo, resumeAudio, playShot, playWallPlace, playDash, playWallDestroy, playWaveClear, playSword } from './audio.js';
 import { getInput, getMobileInput, isMobile, setupMobileControls, isWallMode, exitWallMode } from './input.js';
-import { connect, sendInput, sendPing, getState, getMyId, getPing, drainEvents } from './network.js';
+import { connect, sendInput, sendPing, getState, getMyId, getPing, drainEvents, disconnect } from './network.js';
 import { showTitle, showHUD, showGameOver, updateHUD, showCombo, updatePing, getPlayerName, updateUpgradeDisplay, updateWeaponHUD, showControlsHint, hideControlsHint, updateCountdown, updateAbilities, updateInfo, updatePlayers, showYouDied, hideYouDied, updateWallMode } from './ui.js';
 import { showUpgradeShop, hideUpgradeShop } from './upgrades.js';
 
@@ -68,6 +68,11 @@ let predVelX = 0, predVelZ = 0;
 let prevInputDx = 0, prevInputDz = 0;
 let speedTrailCounter = 0;
 
+// Persistent corpses
+const corpses = [];
+const corpseGeo = new THREE.PlaneGeometry(1.2, 1.2);
+corpseGeo.rotateX(-Math.PI / 2);
+
 // Track server overheated state for visual sync
 let serverOverheated = false;
 let wasAlive = true;
@@ -78,6 +83,36 @@ if (isMobile()) setupMobileControls();
 
 document.getElementById('play-btn').addEventListener('click', startGame);
 document.getElementById('restart-btn').addEventListener('click', startGame);
+document.getElementById('menu-btn').addEventListener('click', quitToMenu);
+document.getElementById('go-menu-btn').addEventListener('click', quitToMenu);
+
+// ESC during gameplay = quit to menu (only when NOT in wall mode)
+document.addEventListener('keydown', e => {
+  if (e.code === 'Escape' && gameActive && !isWallMode()) quitToMenu();
+});
+
+function quitToMenu() {
+  gameActive = false;
+  hasPrediction = false;
+  disconnect();
+  hideUpgradeShop();
+  hideControlsHint();
+  hideYouDied();
+  exitWallMode();
+  updateWallMode(false);
+  ghostWall.visible = false;
+  removeAllEnemies();
+  for (const [id, data] of knownProjectiles) { scene.remove(data.mesh); }
+  knownProjectiles.clear();
+  for (const [id, data] of knownWalls) { scene.remove(data.mesh); data.mat.dispose(); }
+  knownWalls.clear();
+  for (const [id] of knownPlayers) { removePlayerMesh(id); }
+  knownPlayers.clear();
+  knownEnemies.clear();
+  for (const c of corpses) { scene.remove(c); c.material.dispose(); }
+  corpses.length = 0;
+  showTitle();
+}
 
 async function startGame() {
   resumeAudio();
@@ -96,6 +131,8 @@ async function startGame() {
     knownProjectiles.clear();
     for (const [id, data] of knownWalls) { scene.remove(data.mesh); data.mat.dispose(); }
     knownWalls.clear();
+    for (const c of corpses) { scene.remove(c); c.material.dispose(); }
+    corpses.length = 0;
     hasPrediction = false;
     predDashTimer = 0;
     serverOverheated = false;
@@ -257,6 +294,7 @@ function gameLoop() {
   updateParticles(dt);
   updateCombatVisuals(dt);
   updateDyingEnemies(dt);
+  updateAfterimages(dt);
 
   const myId = getMyId();
   const state = getState();
@@ -378,9 +416,14 @@ function processState(state, dt) {
     }
     const wData = knownWalls.get(w.id);
     if (wData) {
-      const hpRatio = w.hp / wData.maxHp;
+      const hpRatio = Math.max(0, w.hp / wData.maxHp);
       wData.mat.opacity = 0.4 + hpRatio * 0.6;
-      wData.mat.transparent = hpRatio < 1;
+      wData.mat.transparent = true;
+      // Shift color from grey to red as wall takes damage
+      const r = 0.53 + (1 - hpRatio) * 0.47;
+      const g = 0.53 * hpRatio;
+      const b = 0.6 * hpRatio;
+      wData.mat.color.setRGB(r, g, b);
     }
   }
 
@@ -388,11 +431,11 @@ function processState(state, dt) {
   if (me) {
     updateHUD(state.wave, state.score, me.hp, me.maxHp);
     updateUpgradeDisplay(me.upgrades);
-    const dashPct = me.dashCooldown > 0 ? Math.max(0, 1 - me.dashCooldown / 2000) * 100 : 100;
+    const dashCharges = me.dashCharges !== undefined ? me.dashCharges : 3;
     const dashFill = document.getElementById('dash-fill');
-    if (dashFill) dashFill.style.width = dashPct + '%';
+    if (dashFill) dashFill.style.width = (dashCharges / 3 * 100) + '%';
     updateWeaponHUD(me.weapon, me.overheated, me.heatPct || 0);
-    updateAbilities(me.wallCharges !== undefined ? me.wallCharges : 8, me.specialCd || 0, me.dashCooldown || 0);
+    updateAbilities(me.wallCharges !== undefined ? me.wallCharges : 8, me.specialCd || 0, dashCharges, me.swordCd || 0);
     updateInfo(me.kills || 0);
     // Show YOU DIED when player dies but game continues
     if (!me.alive && wasAlive) {
@@ -418,9 +461,23 @@ function processState(state, dt) {
 
 function handleEvent(ev) {
   switch (ev.t) {
+    case 'sword': {
+      showSwordSlash(ev.pos[0], ev.pos[2], ev.angle, ev.combo);
+      playSword(ev.combo);
+      break;
+    }
     case 'kill': {
+      spawnGoreChunks(ev.pos[0], ev.pos[2]);
       spawnKillParticles(ev.pos[0], ev.pos[2], 0xff4444);
       playKill();
+      // Persistent corpse decal
+      const corpseMat = new THREE.MeshBasicMaterial({ color: 0x440000, transparent: true, opacity: 0.4, side: THREE.DoubleSide });
+      const corpseMesh = new THREE.Mesh(corpseGeo, corpseMat);
+      corpseMesh.position.set(ev.pos[0], 0.02, ev.pos[2]);
+      corpseMesh.rotation.y = Math.random() * Math.PI * 2;
+      scene.add(corpseMesh);
+      corpses.push(corpseMesh);
+      if (corpses.length > 50) { const old = corpses.shift(); scene.remove(old); old.material.dispose(); }
       // Score popup at kill location
       const combo = ev.combo || 0;
       const wave = getState()?.wave || 1;
@@ -486,6 +543,8 @@ function handleEvent(ev) {
       exitWallMode();
       updateWallMode(false);
       ghostWall.visible = false;
+      for (const c of corpses) { scene.remove(c); c.material.dispose(); }
+      corpses.length = 0;
       showGameOver(ev.wave, ev.score, ev.players || ev.kills);
       playDeath();
       break;

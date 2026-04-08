@@ -58,6 +58,11 @@ export function playCombo() { tone(523, 0.2, 0.1); tone(659, 0.2, 0.1); tone(784
 export function playWallPlace() { noise(0.06, 300, 'lowpass'); tone(200, 0.08, 0.12); }
 export function playDash() { noise(0.08, 2000, 'highpass'); tone(800, 0.06, 0.08); }
 export function playWallDestroy() { noise(0.15, 200, 'lowpass'); tone(120, 0.12, 0.15); }
+export function playSword(combo) {
+  const freqs = [400, 500, 700];
+  tone(freqs[combo] || 400, 0.1, 0.15);
+  noise(0.06, 1500 + combo * 500, 'highpass');
+}
 export function playWaveClear() { tone(523, 0.1, 0.15); setTimeout(() => tone(659, 0.1, 0.15), 80); setTimeout(() => tone(784, 0.12, 0.15), 160); setTimeout(() => tone(1047, 0.2, 0.12), 240); }
 export function toggleAudio() { enabled = !enabled; return enabled; }
 export function resumeAudio() { if (ctx && ctx.state === 'suspended') ctx.resume(); }

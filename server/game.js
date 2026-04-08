@@ -1,18 +1,48 @@
 import {
   TICK_MS, TICK_RATE, ARENA_RADIUS, PLAYER, COMBO_DECAY_MS, COMBO_TIERS,
   PICKUP_DROP_BASE, PICKUP_DROP_COMBO_BONUS, PICKUP_DESPAWN_MS, PICKUPS,
-  WAVE_REST_MS, SCALING, ENEMY_DEFS, WALL, DASH,
+  WAVE_REST_MS, SCALING, ENEMY_DEFS, WALL, DASH, SWORD,
   ARENA_SHRINK_PER_WAVE, ARENA_MIN_RADIUS, ARENA_OUTSIDE_DPS,
   waveEnemyCount, enemyTypesForWave, scaleStat,
   UPGRADE_DEFS, UPGRADE_TIER_WEIGHTS, WEAPONS, OVERHEAT,
 } from './config.js';
+
+// OBB wall collision -- returns push vector or null
+function wallPush(ex, ez, w, radius) {
+  const cos = Math.cos(-w.angle), sin = Math.sin(-w.angle);
+  const dx = ex - w.x, dz = ez - w.z;
+  const lx = dx * cos - dz * sin;
+  const lz = dx * sin + dz * cos;
+  const hw = WALL.halfWidth + radius;
+  const hd = WALL.halfDepth + radius;
+  const ox = hw - Math.abs(lx);
+  const oz = hd - Math.abs(lz);
+  if (ox <= 0 || oz <= 0) return null;
+  let px = 0, pz = 0;
+  if (ox < oz) px = ox * Math.sign(lx);
+  else pz = oz * Math.sign(lz);
+  const cosR = Math.cos(w.angle), sinR = Math.sin(w.angle);
+  return { x: px * cosR - pz * sinR, z: px * sinR + pz * cosR };
+}
+
+// Point-in-wall check for projectiles (no radius expansion)
+function pointInWall(px, pz, w, radius) {
+  const cos = Math.cos(-w.angle), sin = Math.sin(-w.angle);
+  const dx = px - w.x, dz = pz - w.z;
+  const lx = dx * cos - dz * sin;
+  const lz = dx * sin + dz * cos;
+  return Math.abs(lx) < WALL.halfWidth + radius && Math.abs(lz) < WALL.halfDepth + radius;
+}
 
 let nextEnemyId = 1;
 let nextPickupId = 1;
 let nextProjectileId = 1;
 let nextWallId = 1;
 
-export function startGameLoop(roomManager) {
+let onGameOver = null;
+
+export function startGameLoop(roomManager, addScoreFn) {
+  onGameOver = addScoreFn || null;
   setInterval(() => {
     try {
       roomManager.cleanup();
@@ -72,9 +102,9 @@ function tickRoom(room) {
 function updatePlayers(room, dt) {
   for (const [, p] of room.players) {
     if (!p.alive) continue;
-    // Dash processing
+    // Chain dash processing (HLD-style)
     if (p.input.dash) {
-      if (p.dashCooldown <= 0 && p.dashTimer <= 0) {
+      if (p.dashCharges > 0 && p.dashTimer <= 0) {
         let ddx = p.input.dx, ddz = p.input.dz;
         const dlen = Math.sqrt(ddx * ddx + ddz * ddz);
         if (dlen > 0) { ddx /= dlen; ddz /= dlen; }
@@ -85,8 +115,10 @@ function updatePlayers(room, dt) {
         }
         p.dashDirX = ddx; p.dashDirZ = ddz;
         p.dashTimer = DASH.duration;
-        p.dashCooldown = Math.max(800, DASH.cooldown - (p.upgrades.dash_cooldown || 0) * 300);
         p.dashIframes = DASH.iframes;
+        p.dashCharges--;
+        p.dashChainTimer = 0;
+        p.dashRechargeTimer = DASH.rechargeRate;
       }
       p.input.dash = false;
     }
@@ -96,6 +128,20 @@ function updatePlayers(room, dt) {
       const dashSpeed = DASH.speed * (1 + (p.upgrades.dash_distance || 0) * 0.2);
       p.x += p.dashDirX * dashSpeed * dt;
       p.z += p.dashDirZ * dashSpeed * dt;
+      if (p.dashTimer <= 0) p.dashChainTimer = DASH.chainWindow;
+    } else if (p.dashChainTimer > 0) {
+      p.dashChainTimer -= TICK_MS;
+    }
+    // Recharge dash charges when not dashing or chaining
+    if (p.dashCharges < DASH.charges && p.dashTimer <= 0 && p.dashChainTimer <= 0) {
+      p.dashRechargeTimer -= TICK_MS;
+      if (p.dashRechargeTimer <= 0) {
+        p.dashCharges++;
+        p.dashRechargeTimer = DASH.rechargeRate;
+      }
+    }
+    if (p.dashTimer > 0) {
+      // Movement handled above during dash
     } else {
       const dx = p.input.dx;
       const dz = p.input.dz;
@@ -107,14 +153,10 @@ function updatePlayers(room, dt) {
         p.z += (dz / len) * speed * dt;
       }
     }
-    // Player-wall collision
+    // Player-wall collision (OBB)
     for (const [, w] of room.walls) {
-      const wdx = p.x - w.x; const wdz = p.z - w.z;
-      const wdist = Math.sqrt(wdx * wdx + wdz * wdz);
-      if (wdist < WALL.collisionRadius && wdist > 0.01) {
-        const push = (WALL.collisionRadius - wdist) / wdist;
-        p.x += wdx * push; p.z += wdz * push;
-      }
+      const push = wallPush(p.x, p.z, w, 0.5);
+      if (push) { p.x += push.x; p.z += push.z; }
     }
     // NaN guard
     if (isNaN(p.x) || isNaN(p.z)) { p.x = 0; p.z = 0; }
@@ -145,10 +187,27 @@ function updatePlayers(room, dt) {
     if (p.input.attack && p.shootCooldown <= 0) {
       const aimAngle = Math.atan2(p.input.aimZ - p.z, p.input.aimX - p.x);
       playerShoot(room, p, aimAngle);
+      p.shotsFired++;
     }
     if (p.input.special && p.specialCooldown <= 0) {
       p.specialCooldown = PLAYER.specialCooldown;
       specialAttack(room, p);
+    }
+    // Sword combat
+    if (p.input.sword) {
+      if (p.swordCooldown <= 0) {
+        const aimAngle = Math.atan2(p.input.aimZ - p.z, p.input.aimX - p.x);
+        swordSlash(room, p, aimAngle);
+        p.swordCombo = (p.swordCombo + 1) % 3;
+        p.swordCooldown = p.swordCombo === 0 ? SWORD.comboPause : SWORD.cooldown;
+        p.swordComboTimer = SWORD.comboWindow;
+      }
+      p.input.sword = false;
+    }
+    if (p.swordCooldown > 0) p.swordCooldown -= TICK_MS;
+    if (p.swordComboTimer > 0) {
+      p.swordComboTimer -= TICK_MS;
+      if (p.swordComboTimer <= 0) p.swordCombo = 0;
     }
     // Wall placement
     if (p.input.wall) {
@@ -170,7 +229,6 @@ function updatePlayers(room, dt) {
       p.wallRechargeTimer -= TICK_MS;
       if (p.wallRechargeTimer <= 0) p.wallCharges = WALL.charges;
     }
-    if (p.dashCooldown > 0) p.dashCooldown -= TICK_MS;
     // Arena outside damage
     const pDist = Math.sqrt(p.x * p.x + p.z * p.z);
     if (pDist > room.arenaRadius - 1) {
@@ -238,6 +296,31 @@ function specialAttack(room, player) {
       e.x += dx * kb; e.z += dz * kb;
     }
   }
+}
+
+function swordSlash(room, player, aimAngle) {
+  const halfArc = SWORD.arc / 2;
+  const rangeSq = SWORD.range * SWORD.range;
+  for (const [, e] of room.enemies) {
+    const dx = e.x - player.x;
+    const dz = e.z - player.z;
+    const distSq = dx * dx + dz * dz;
+    if (distSq > rangeSq) continue;
+    const angle = Math.atan2(dz, dx);
+    let diff = angle - aimAngle;
+    while (diff > Math.PI) diff -= Math.PI * 2;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+    if (Math.abs(diff) > halfArc) continue;
+    const dmg = Math.floor(SWORD.damage * (1 + player.swordCombo * 0.15));
+    const crit = Math.random() < (PLAYER.critChance + (player.upgrades.crit_chance || 0) * 0.05);
+    const critMult = PLAYER.critMultiplier + (player.upgrades.crit_damage || 0) * 0.5;
+    const finalDmg = Math.floor(dmg * (crit ? critMult : 1));
+    damageEnemy(room, e, finalDmg, player, crit);
+    const dist = Math.sqrt(distSq) || 1;
+    e.x += (dx / dist) * SWORD.knockback;
+    e.z += (dz / dist) * SWORD.knockback;
+  }
+  room.broadcast({ t: 'sword', pid: player.id, angle: aimAngle, combo: player.swordCombo, pos: [player.x, 0, player.z] });
 }
 
 function pDamage(player) {
@@ -411,13 +494,11 @@ function updateEnemies(room, dt) {
     }
     if (e.attackCooldown > 0) e.attackCooldown -= TICK_MS;
     if (e.chargeCooldown > 0) e.chargeCooldown -= TICK_MS;
-    // Push from walls
+    // Push from walls (OBB)
     for (const [, w] of room.walls) {
-      const wdx = e.x - w.x; const wdz = e.z - w.z;
-      const wdist = Math.sqrt(wdx * wdx + wdz * wdz);
-      if (wdist < WALL.collisionRadius && wdist > 0) {
-        const push = (WALL.collisionRadius - wdist) / wdist;
-        e.x += wdx * push; e.z += wdz * push;
+      const push = wallPush(e.x, e.z, w, 0.6);
+      if (push) {
+        e.x += push.x; e.z += push.z;
         w.hp -= e.damage * dt * 0.15;
       }
     }
@@ -447,6 +528,17 @@ function updateProjectiles(room, dt) {
       room.projectiles.delete(id); continue;
     }
     if (pr.type === 'bullet') {
+      // Player bullets hit walls (walls are destructible)
+      let hitWall = false;
+      for (const [, w] of room.walls) {
+        if (pointInWall(pr.x, pr.z, w, 0.2)) {
+          w.hp -= pr.damage;
+          room.broadcast({ t: 'hit', target: 'wall', dmg: pr.damage, pos: [w.x, 0, w.z] });
+          room.projectiles.delete(id);
+          hitWall = true; break;
+        }
+      }
+      if (hitWall) continue;
       const hitRadius = 1.2 * (1 + 0.3 * ((pr.owner && room.players.get(pr.owner)?.upgrades?.bullet_size) || 0));
       for (const [, e] of room.enemies) {
         if (pr.hitSet && pr.hitSet.has(e.id)) continue;
@@ -468,11 +560,10 @@ function updateProjectiles(room, dt) {
         }
       }
     } else {
-      // Enemy projectiles blocked by walls
+      // Enemy projectiles blocked by walls (OBB)
       let hitWall = false;
       for (const [, w] of room.walls) {
-        const wdx = pr.x - w.x; const wdz = pr.z - w.z;
-        if (wdx * wdx + wdz * wdz < WALL.collisionRadius * WALL.collisionRadius) {
+        if (pointInWall(pr.x, pr.z, w, 0.2)) {
           w.hp -= 10;
           room.projectiles.delete(id);
           hitWall = true; break;
@@ -498,7 +589,7 @@ function spawnProjectile(room, x, z, vx, vz, type, damage, owner) {
 
 function spawnWall(room, x, z, angle, player) {
   const id = 'w' + nextWallId++;
-  const wallHp = WALL.hp + ((player && player.upgrades.wall_hp) || 0) * 30;
+  const wallHp = WALL.hp + ((player && player.upgrades.wall_hp) || 0) * 50;
   room.walls.set(id, { id, x, z, angle, hp: wallHp, maxHp: wallHp, age: 0 });
 }
 
@@ -615,7 +706,10 @@ function checkGameOver(room) {
     room.state = 'gameover';
     const players = [];
     for (const [, p] of room.players) {
-      players.push({ id: p.id, name: p.name, kills: p.kills });
+      players.push({ id: p.id, name: p.name, kills: p.kills, shotsFired: p.shotsFired });
+      if (onGameOver) {
+        try { onGameOver(p.name, room.score, room.wave, p.kills, p.shotsFired); } catch {}
+      }
     }
     room.broadcast({ t: 'gameover', wave: room.wave, score: room.score, players });
   }

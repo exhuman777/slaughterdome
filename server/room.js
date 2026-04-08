@@ -1,4 +1,4 @@
-import { MAX_PLAYERS, MAX_ROOMS, ROOM_CLEANUP_MS, PLAYER, ARENA_RADIUS, WALL, OVERHEAT } from './config.js';
+import { MAX_PLAYERS, MAX_ROOMS, ROOM_CLEANUP_MS, PLAYER, ARENA_RADIUS, WALL, OVERHEAT, DASH, SWORD } from './config.js';
 
 let nextRoomId = 1;
 let nextPlayerId = 1;
@@ -35,10 +35,13 @@ export class Room {
       x: Math.cos(angle) * 5, z: Math.sin(angle) * 5,
       hp: PLAYER.hp, maxHp: PLAYER.hp, alive: true,
       buffs: {}, kills: 0,
-      input: { dx: 0, dz: 0, attack: false, special: false, aimX: 0, aimZ: 0, wall: false },
+      input: { dx: 0, dz: 0, attack: false, special: false, aimX: 0, aimZ: 0, wall: false, sword: false },
       shootCooldown: 0, specialCooldown: 0,
       wallCharges: WALL.charges, wallPlaceCooldown: 0, wallRechargeTimer: 0,
-      dashTimer: 0, dashCooldown: 0, dashDirX: 0, dashDirZ: 0, dashIframes: 0,
+      dashTimer: 0, dashDirX: 0, dashDirZ: 0, dashIframes: 0,
+      dashCharges: DASH.charges, dashRechargeTimer: 0, dashChainTimer: 0,
+      swordCombo: 0, swordCooldown: 0, swordComboTimer: 0,
+      shotsFired: 0,
       upgrades: {}, weapon: 'pistol', pendingUpgrades: null,
       heatTimer: 0, overheated: false, overheatCooldown: 0,
     };
@@ -83,7 +86,9 @@ export class Room {
         hp: p.hp, maxHp: p.maxHp, alive: p.alive,
         buffs: Object.keys(p.buffs).filter(b => p.buffs[b] > 0),
         dashing: p.dashTimer > 0,
-        dashCooldown: p.dashCooldown,
+        dashCharges: p.dashCharges,
+        swordCombo: p.swordCombo,
+        swordCd: Math.max(0, p.swordCooldown),
         upgrades: p.upgrades,
         weapon: p.weapon,
         overheated: p.overheated,
@@ -93,6 +98,7 @@ export class Room {
         wallCharges: p.wallCharges,
         specialCd: Math.max(0, p.specialCooldown),
         kills: p.kills,
+        shotsFired: p.shotsFired,
       });
     }
     const enemies = [];

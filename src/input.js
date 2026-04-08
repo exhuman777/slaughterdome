@@ -3,8 +3,9 @@ import * as THREE from 'https://esm.sh/three@0.162.0';
 
 const keys = {};
 const mouse = { x: 0, z: 0, left: false, right: false };
-let wallTriggered = false;
+let wallTriggeredFrames = 0;
 let dashTriggered = false;
+let swordTriggered = false;
 let wallMode = false;
 const raycaster = new THREE.Raycaster();
 const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
@@ -17,7 +18,8 @@ document.addEventListener('keydown', e => {
     wallMode = !wallMode;
   }
   if ((e.code === 'ShiftLeft' || e.code === 'ShiftRight') && !e.repeat) dashTriggered = true;
-  if (e.code === 'Escape') wallMode = false;
+  if (e.code === 'KeyQ' && !e.repeat) swordTriggered = true;
+  if (e.code === 'Escape' && wallMode) { wallMode = false; e.stopImmediatePropagation(); }
 });
 document.addEventListener('keyup', e => { keys[e.code] = false; });
 document.addEventListener('mousemove', e => {
@@ -32,7 +34,7 @@ document.addEventListener('mousemove', e => {
 document.addEventListener('mousedown', e => {
   if (e.button === 0) {
     mouse.left = true;
-    if (wallMode) wallTriggered = true;
+    if (wallMode) wallTriggeredFrames = 10;
   }
   if (e.button === 2) {
     mouse.right = true;
@@ -58,11 +60,13 @@ export function getInput() {
   if (len > 0) { dx /= len; dz /= len; }
   const dash = dashTriggered;
   dashTriggered = false;
-  const wall = wallTriggered;
-  wallTriggered = false;
+  const wall = wallTriggeredFrames > 0;
+  if (wallTriggeredFrames > 0) wallTriggeredFrames--;
+  const sword = swordTriggered;
+  swordTriggered = false;
   // In wall mode, suppress attack -- LMB places walls instead
   const attack = wallMode ? false : mouse.left;
-  return { dx, dz, attack, special: mouse.right || keys['Space'], aimX: mouse.x, aimZ: mouse.z, wall, dash };
+  return { dx, dz, attack, special: mouse.right || keys['Space'], aimX: mouse.x, aimZ: mouse.z, wall, dash, sword };
 }
 
 let touchMove = { dx: 0, dz: 0 };

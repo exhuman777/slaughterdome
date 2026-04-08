@@ -73,6 +73,15 @@
   .wep-name { font-size: 12px; font-weight: 700; color: #fff; margin-bottom: 4px; }
   .wep-stat { font-size: 10px; color: #666; line-height: 1.5; }
 
+  .leaderboard { margin-bottom: 24px; font-size: 12px; }
+  .lb-row { display:flex; justify-content:space-between; padding:4px 8px; border-bottom:1px solid #1a1816; }
+  .lb-row:nth-child(even) { background:rgba(230,153,58,0.03); }
+  .lb-rank { color:#e6993a; font-weight:700; width:30px; }
+  .lb-name { color:#c4a882; flex:1; }
+  .lb-score { color:#fff; font-weight:700; width:60px; text-align:right; }
+  .lb-wave { color:#888; width:50px; text-align:right; }
+  .lb-kills { color:#ff4444; width:50px; text-align:right; }
+  .lb-empty { color:#444; text-align:center; padding:16px; }
   .play-section { text-align: center; margin-top: 8px; }
   #title input {
     background: rgba(255,255,255,0.05); border: 1px solid #444; color: #e6993a;
@@ -106,6 +115,10 @@
   #gameover h2 { font-size: 48px; color: #ff4444; margin-bottom: 20px; font-weight: 800; }
   #gameover .stats { font-size: 18px; margin: 10px 0; }
   #gameover button { background: #ff4444; color: #fff; border: none; padding: 12px 48px; font-size: 20px; font-family: inherit; cursor: pointer; margin-top: 20px; letter-spacing: 4px; font-weight: 700; }
+  #menu-btn { position:absolute; top:10px; left:10px; background:none; border:1px solid #444; color:#888; padding:4px 12px; font-family:inherit; font-size:11px; cursor:pointer; letter-spacing:2px; z-index:10; }
+  #menu-btn:hover { border-color:#e6993a; color:#e6993a; }
+  #go-menu-btn { background:none; border:1px solid #888; color:#888; padding:10px 36px; font-size:16px; font-family:inherit; cursor:pointer; margin-top:10px; letter-spacing:3px; }
+  #go-menu-btn:hover { border-color:#e6993a; color:#e6993a; }
   #ping { position: absolute; top: 10px; right: 10px; color: #666; font-size: 12px; display: none; }
   #upgrade-shop { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); display:flex; gap:16px; z-index:50; }
   .upgrade-card { background:#1a1a1a; border:2px solid #888; border-radius:4px; padding:16px 20px; width:180px; cursor:pointer; text-align:center; font-family:inherit; transition:transform 0.1s,border-color 0.1s; }
@@ -119,6 +132,7 @@
   #ammo-bar { width:200px; height:4px; background:#222; border-radius:2px; margin-top:4px; }
   #ammo-fill { height:100%; background:#ffcc44; border-radius:2px; transition:width 0.1s; }
   #ammo-text { font-size:11px; color:#aaa; margin-top:2px; }
+  #gameover .go-player .go-shots { color:#888; font-size:13px; }
   #hud-controls { position:absolute; bottom:6px; left:50%; transform:translateX(-50%); color:#444; font-size:10px; letter-spacing:1px; }
   #hud-countdown { position:absolute; top:40%; left:50%; transform:translate(-50%,-50%); font-size:48px; color:#ff4444; text-shadow:0 0 15px #ff0000; display:none; letter-spacing:4px; font-weight:800; }
   #hud-abilities { position:absolute; bottom:20px; right:20px; text-align:right; font-size:12px; color:#c4a882; letter-spacing:1px; }
@@ -163,7 +177,8 @@
         <div class="ctrl-row"><span class="ctrl-key">MOUSE</span><span class="ctrl-desc">Aim</span></div>
         <div class="ctrl-row"><span class="ctrl-key">LMB</span><span class="ctrl-desc">Shoot</span></div>
         <div class="ctrl-row"><span class="ctrl-key">RMB</span><span class="ctrl-desc">AoE blast</span></div>
-        <div class="ctrl-row"><span class="ctrl-key">SHIFT</span><span class="ctrl-desc">Dash (i-frames)</span></div>
+        <div class="ctrl-row"><span class="ctrl-key">SHIFT</span><span class="ctrl-desc">Dash (chain x3)</span></div>
+        <div class="ctrl-row"><span class="ctrl-key">Q</span><span class="ctrl-desc">Sword (3-hit combo)</span></div>
         <div class="ctrl-row"><span class="ctrl-key">E</span><span class="ctrl-desc">Wall mode (click to place)</span></div>
         <div class="ctrl-row"><span class="ctrl-key">ESC</span><span class="ctrl-desc">Exit wall mode</span></div>
         <div class="ctrl-row"><span class="ctrl-key">1 2 3</span><span class="ctrl-desc">Pick upgrade</span></div>
@@ -177,6 +192,9 @@
         <div class="wep-box"><div class="wep-name">FLAME</div><div class="wep-stat">Short range spray<br>Rapid fire</div></div>
       </div>
 
+      <div class="section-label">Leaderboard</div>
+      <div id="leaderboard" class="leaderboard">Loading...</div>
+
       <div class="play-section">
         <input id="name-input" type="text" placeholder="Enter name..." maxlength="12">
         <br>
@@ -187,6 +205,7 @@
   </div>
 
   <div id="hud">
+    <button id="menu-btn">EXIT</button>
     <div id="hud-wave">WAVE 1</div>
     <div id="hud-score">SCORE: 0</div>
     <div id="hud-hp"><div id="hp-bar"><div id="hp-fill" style="width:100%"></div></div>
@@ -199,6 +218,8 @@
     <div class="stats" id="go-score"></div>
     <div class="stats" id="go-kills"></div>
     <button id="restart-btn">PLAY AGAIN</button>
+    <br>
+    <button id="go-menu-btn">MAIN MENU</button>
   </div>
   <div id="you-died"><h3>YOU DIED</h3><div class="sub">SPECTATING</div></div>
   <div id="ping"></div>
@@ -207,7 +228,7 @@
   <div id="hud-info" style="display:none;"></div>
   <div id="hud-players" style="display:none;"></div>
   <div id="hud-wallmode">WALL MODE</div>
-  <div id="hud-controls" style="display:none;">WASD move | LMB shoot | RMB AoE | E wall mode | SHIFT dash</div>
+  <div id="hud-controls" style="display:none;">WASD move | LMB shoot | Q sword | RMB AoE | E wall | SHIFT dash</div>
   <div id="hud-countdown"></div>
   <div id="upgrade-shop" style="display:none;"></div>
   <div id="upgrade-strip"></div>

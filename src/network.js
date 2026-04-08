@@ -98,6 +98,7 @@ export function sendInput(input) {
     s: input.special ? 1 : 0,
     w: input.wall ? 1 : 0,
     dash: input.dash ? 1 : 0,
+    sw: input.sword ? 1 : 0,
     aim: [input.aimX, 0, input.aimZ],
   }));
 }
@@ -115,6 +116,18 @@ export function isConnected() { return connected; }
 export function sendUpgradePick(index) {
   if (!connected || !ws) return;
   ws.send(JSON.stringify({ t: 'pick_upgrade', index }));
+}
+
+export function disconnect() {
+  if (ws) {
+    reconnecting = true; // prevent auto-reconnect
+    ws.close();
+    ws = null;
+  }
+  connected = false;
+  myId = null;
+  latestState = null;
+  eventQueue = [];
 }
 
 export function drainEvents() {

@@ -103,6 +103,24 @@ export function spawnSpeedTrail(x, z, color) {
   particles.push({ mesh, mat, vx: 0, vy: 0, vz: 0, life: 0.25, decay: 4 });
 }
 
+export function spawnGoreChunks(x, z) {
+  const count = 8;
+  for (let i = 0; i < count && particles.length < MAX_PARTICLES; i++) {
+    const color = Math.random() > 0.3 ? 0xaa0000 : 0x660000;
+    const mat = new THREE.MeshBasicMaterial({ color, transparent: true });
+    const mesh = new THREE.Mesh(boxGeo, mat);
+    mesh.position.set(x + (Math.random() - 0.5), 0.8, z + (Math.random() - 0.5));
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 4 + Math.random() * 6;
+    scene.add(mesh);
+    particles.push({
+      mesh, mat,
+      vx: Math.cos(angle) * speed, vy: 4 + Math.random() * 5, vz: Math.sin(angle) * speed,
+      life: 1.2, decay: 0.8,
+    });
+  }
+}
+
 export function spawnAoeRing(x, z, radius, color) {
   if (particles.length >= MAX_PARTICLES) return;
   const ringGeo = new THREE.TorusGeometry(0.5, 0.12, 6, 24);
