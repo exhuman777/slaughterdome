@@ -30,9 +30,9 @@ function pulseDamageOverlay() {
 initRenderer();
 createArena();
 initProjPool();
-loadModels(); // async -- trees use loaded models when ready, fallback to procedural
-loadCharacters(); // async -- player characters use loaded models when ready
-loadDecorations(); // async -- ruins environment decorations
+loadModels().catch(e => console.warn('Tree models failed:', e));
+loadCharacters().catch(e => console.warn('Character models failed:', e));
+loadDecorations().catch(e => console.warn('Decoration models failed:', e));
 showTitle();
 
 let gameActive = false;
