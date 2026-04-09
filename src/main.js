@@ -29,10 +29,6 @@ function pulseDamageOverlay() {
 
 initRenderer();
 createArena();
-initProjPool();
-loadModels().catch(e => console.warn('Tree models failed:', e));
-loadCharacters().catch(e => console.warn('Character models failed:', e));
-loadDecorations().catch(e => console.warn('Decoration models failed:', e));
 showTitle();
 
 let gameActive = false;
@@ -50,6 +46,12 @@ const bulletGeo = new THREE.SphereGeometry(0.2, 8, 8);
 const bulletMat = new THREE.MeshBasicMaterial({ color: 0xffee44 });
 const spitGeo = new THREE.SphereGeometry(0.25, 6, 6);
 const spitMat = new THREE.MeshBasicMaterial({ color: 0x33ff33 });
+
+// Init systems that depend on above constants
+initProjPool();
+loadModels().catch(e => console.warn('Tree models failed:', e));
+loadCharacters().catch(e => console.warn('Character models failed:', e));
+loadDecorations().catch(e => console.warn('Decoration models failed:', e));
 
 // Wall rendering
 const knownWalls = new Map();
