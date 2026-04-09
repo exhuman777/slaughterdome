@@ -1,8 +1,7 @@
 import * as THREE from 'https://esm.sh/three@0.162.0';
-import { OBJLoader } from 'https://esm.sh/three@0.162.0/addons/loaders/OBJLoader.js';
 import { scene } from './renderer.js';
 
-const loader = new OBJLoader();
+let loader = null;
 const templates = {};
 let ready = false;
 const placed = [];
@@ -56,6 +55,10 @@ const HEIGHTS = {
 };
 
 export async function loadDecorations() {
+  try {
+    const { OBJLoader } = await import('https://esm.sh/three@0.162.0/addons/loaders/OBJLoader.js');
+    loader = new OBJLoader();
+  } catch (e) { console.warn('OBJLoader failed:', e); return; }
   const objs = await Promise.all(
     DECO_MODELS.map(n => load('models/' + n + '.obj'))
   );

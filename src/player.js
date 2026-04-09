@@ -1,21 +1,25 @@
 import * as THREE from 'https://esm.sh/three@0.162.0';
-import { GLTFLoader } from 'https://esm.sh/three@0.162.0/addons/loaders/GLTFLoader.js';
-import * as SkeletonUtils from 'https://esm.sh/three@0.162.0/addons/utils/SkeletonUtils.js';
 import { scene } from './renderer.js';
 
 const PLAYER_COLORS = [0x44aaff, 0xff5555, 0x55ff55, 0xffff55];
 const playerMeshes = new Map();
 let localId = null;
 
-// Character model templates
+// Character model templates (loaded dynamically to avoid blocking module chain)
 const charTemplates = [];
-const gltfLoader = new GLTFLoader();
 
 export async function loadCharacters() {
-  const files = ['models/warrior.gltf', 'models/rogue.gltf', 'models/ranger.gltf'];
-  const results = await Promise.all(files.map(url =>
-    new Promise(r => gltfLoader.load(url, r, null, () => r(null)))
-  ));
+  try {
+    const [{ GLTFLoader }, SkeletonUtils] = await Promise.all([
+      import('https://esm.sh/three@0.162.0/addons/loaders/GLTFLoader.js'),
+      import('https://esm.sh/three@0.162.0/addons/utils/SkeletonUtils.js'),
+    ]);
+    globalThis._SkeletonUtils = SkeletonUtils;
+    const gltfLoader = new GLTFLoader();
+    const files = ['models/warrior.gltf', 'models/rogue.gltf', 'models/ranger.gltf'];
+    const results = await Promise.all(files.map(url =>
+      new Promise(r => gltfLoader.load(url, r, null, () => r(null)))
+    ));
   for (const gltf of results) {
     if (!gltf) { charTemplates.push(null); continue; }
     gltf.scene.updateWorldMatrix(true, true);
@@ -33,6 +37,7 @@ export async function loadCharacters() {
     for (const clip of gltf.animations) clips[clip.name] = clip;
     charTemplates.push({ scene: gltf.scene, clips });
   }
+  } catch (e) { console.warn('Character models failed:', e); }
 }
 
 // Dash afterimage system
@@ -63,7 +68,7 @@ export function createPlayerMesh(id, index) {
 
   const template = charTemplates.length > 0 ? charTemplates[index % charTemplates.length] : null;
   if (template) {
-    const model = SkeletonUtils.clone(template.scene);
+    const model = globalThis._SkeletonUtils ? globalThis._SkeletonUtils.clone(template.scene) : template.scene.clone();
     model.traverse(c => {
       if (c.isMesh) {
         c.material = c.material.clone();

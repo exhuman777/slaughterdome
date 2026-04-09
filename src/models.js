@@ -1,7 +1,6 @@
 import * as THREE from 'https://esm.sh/three@0.162.0';
-import { OBJLoader } from 'https://esm.sh/three@0.162.0/addons/loaders/OBJLoader.js';
 
-const loader = new OBJLoader();
+let loader = null;
 const templates = [];
 let ready = false;
 
@@ -54,6 +53,10 @@ function prepare(obj, h, type) {
 }
 
 export async function loadModels() {
+  try {
+    const { OBJLoader } = await import('https://esm.sh/three@0.162.0/addons/loaders/OBJLoader.js');
+    loader = new OBJLoader();
+  } catch (e) { console.warn('OBJLoader failed:', e); return; }
   const defs = [
     { url: 'models/tree1.obj', h: 5, type: 'green' },
     { url: 'models/tree2.obj', h: 5.5, type: 'green' },
