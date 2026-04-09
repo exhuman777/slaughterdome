@@ -111,6 +111,7 @@ const abilitiesEl = document.getElementById('hud-abilities');
 const infoEl = document.getElementById('hud-info');
 const playersEl = document.getElementById('hud-players');
 const wallModeEl = document.getElementById('hud-wallmode');
+const wallHintEl = document.getElementById('wall-hint');
 
 const UPGRADE_NAMES = {
   fire_rate: 'RAPID', bullet_size: 'BIG RND', pierce: 'PIERCE', crit_chance: 'PRECISION',
@@ -175,16 +176,18 @@ export function updateAbilities(wallCharges, specialCd, dashCharges, swordCd) {
   const swordReady = swordCd <= 0;
   let dashPips = '';
   for (let i = 0; i < 3; i++) dashPips += i < dashCharges ? '<span style="color:#e6993a">|</span>' : '<span style="color:#333">|</span>';
+  let wallPips = '';
+  for (let i = 0; i < 8; i++) wallPips += i < wallCharges ? '<span style="color:#4488ff">|</span>' : '<span style="color:#333">|</span>';
   abilitiesEl.innerHTML =
     '<div class="ab-row"><span class="ab-key">[Q]</span> SWORD ' + (swordReady ? '<span class="ab-val">READY</span>' : '<span class="ab-cd">' + (swordCd / 1000).toFixed(1) + 's</span>') + '</div>' +
-    '<div class="ab-row"><span class="ab-key">[E]</span> WALL <span class="ab-val" style="color:' + wallColor + '">' + wallCharges + '/5</span></div>' +
+    '<div class="ab-row"><span class="ab-key">[E]</span> WALL ' + wallPips + '</div>' +
     '<div class="ab-row"><span class="ab-key">[RMB]</span> AoE ' + (specialReady ? '<span class="ab-val">READY</span>' : '<span class="ab-cd">' + Math.ceil(specialCd / 1000) + 's</span>') + '</div>' +
     '<div class="ab-row"><span class="ab-key">[SHIFT]</span> DASH ' + dashPips + '</div>';
 }
 
 export function updateWallMode(active) {
-  if (!wallModeEl) return;
-  wallModeEl.style.display = active ? 'block' : 'none';
+  if (wallModeEl) wallModeEl.style.display = active ? 'block' : 'none';
+  if (wallHintEl) wallHintEl.style.display = active ? 'block' : 'none';
 }
 
 // Info panel (left side)

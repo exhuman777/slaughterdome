@@ -24,7 +24,7 @@ export function initRenderer() {
 
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -36,7 +36,7 @@ export function initRenderer() {
   const sun = new THREE.DirectionalLight(0xffffff, 1.2);
   sun.position.set(20, 40, 20);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(1024, 1024);
+  sun.shadow.mapSize.set(512, 512);
   sun.shadow.camera.near = 1;
   sun.shadow.camera.far = 100;
   sun.shadow.camera.left = -50;
@@ -56,10 +56,10 @@ export function initRenderer() {
   composer.addPass(new RenderPass(scene, camera));
 
   const bloomPass = new UnrealBloomPass(
-    new THREE.Vector2(window.innerWidth, window.innerHeight),
-    0.2,   // strength
-    0.8,   // radius
-    0.4    // threshold
+    new THREE.Vector2(Math.floor(window.innerWidth / 2), Math.floor(window.innerHeight / 2)),
+    0.15,  // strength (reduced)
+    0.6,   // radius
+    0.5    // threshold (higher = fewer objects bloom)
   );
   composer.addPass(bloomPass);
 

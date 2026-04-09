@@ -21,7 +21,6 @@ export function createEnemyMesh(id, type) {
     roughness: 0.4, metalness: 0.3,
   });
   const mesh = new THREE.Mesh(visual.geo(), mat);
-  mesh.castShadow = true;
   const group = new THREE.Group();
   const yOffset = type === 'brute' ? 0.9 : type === 'titan' ? 1.75 : 0.6;
   mesh.position.y = yOffset;
@@ -36,10 +35,6 @@ export function createEnemyMesh(id, type) {
     shield.rotation.y = Math.PI / 2;
     group.add(shield);
   }
-
-  const glow = new THREE.PointLight(visual.color, 0.3, 5);
-  glow.position.y = yOffset;
-  group.add(glow);
 
   const hpBg = new THREE.Mesh(
     new THREE.PlaneGeometry(1.4, 0.15),
@@ -56,7 +51,7 @@ export function createEnemyMesh(id, type) {
 
   group.scale.set(0.01, 0.01, 0.01);
   scene.add(group);
-  enemyMeshes.set(id, { group, mesh, mat, hpFill, glow, type, flashTimer: 0, spawnTimer: 0.3, scalePunch: 0 });
+  enemyMeshes.set(id, { group, mesh, mat, hpFill, type, flashTimer: 0, spawnTimer: 0.3, scalePunch: 0 });
   return group;
 }
 
@@ -91,12 +86,10 @@ export function updateEnemyMesh(id, x, z, hp, maxHp, dt) {
     em.flashTimer -= dt;
     em.mat.emissive.set(0xffffff);
     em.mat.emissiveIntensity = 2 * (em.flashTimer / 0.15);
-    em.glow.intensity = 2;
   } else {
     const visual = ENEMY_VISUALS[em.type] || ENEMY_VISUALS.grunt;
     em.mat.emissive.set(visual.emissive);
     em.mat.emissiveIntensity = 0.5;
-    em.glow.intensity = 0.3;
   }
 
   if (em.type === 'bomber') {

@@ -51,7 +51,7 @@ const wallGeo = new THREE.BoxGeometry(4, 2.5, 0.5);
 const wallMat = new THREE.MeshStandardMaterial({ color: 0x888899, roughness: 0.5, metalness: 0.3 });
 
 // Wall placement preview ghost
-const ghostWallMat = new THREE.MeshBasicMaterial({ color: 0x4488aa, transparent: true, opacity: 0.5, side: THREE.DoubleSide });
+const ghostWallMat = new THREE.MeshBasicMaterial({ color: 0x4488ff, transparent: true, opacity: 0.6, side: THREE.DoubleSide });
 const ghostWall = new THREE.Mesh(wallGeo.clone(), ghostWallMat);
 ghostWall.visible = false;
 ghostWall.position.y = 1.25;
@@ -75,6 +75,7 @@ corpseGeo.rotateX(-Math.PI / 2);
 
 // Environment obstacles
 const obstacleMeshes = new Map();
+let cachedObstacles = [];
 
 // Track server overheated state for visual sync
 let serverOverheated = false;
@@ -116,6 +117,7 @@ function quitToMenu() {
   corpses.length = 0;
   for (const [, mesh] of obstacleMeshes) { scene.remove(mesh); }
   obstacleMeshes.clear();
+  cachedObstacles = [];
   showTitle();
 }
 
@@ -141,6 +143,7 @@ async function startGame() {
     corpses.length = 0;
     for (const [, mesh] of obstacleMeshes) { scene.remove(mesh); }
     obstacleMeshes.clear();
+    cachedObstacles = [];
       hasPrediction = false;
     predDashTimer = 0;
     serverOverheated = false;
@@ -151,6 +154,53 @@ async function startGame() {
     scene.add(ghostWall);
   } catch (err) {
     console.error('Connection failed:', err);
+  }
+}
+
+function syncObstacleMeshes(obstacles) {
+  for (const ob of obstacles) {
+    const key = ob.type + '_' + ob.pos[0] + '_' + ob.pos[2];
+    if (obstacleMeshes.has(key)) continue;
+    if (ob.type === 'tree') {
+      const group = new THREE.Group();
+      const trunkGeo = new THREE.CylinderGeometry(0.3, 0.4, 3, 6);
+      const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c3a1e, roughness: 0.9 });
+      const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+      trunk.position.y = 1.5;
+      trunk.castShadow = true;
+      group.add(trunk);
+      const canopyGeo = new THREE.SphereGeometry(1.4, 8, 6);
+      const canopyMat = new THREE.MeshStandardMaterial({ color: 0x2d5a1e, roughness: 0.8 });
+      const canopy = new THREE.Mesh(canopyGeo, canopyMat);
+      canopy.position.y = 3.5;
+      canopy.castShadow = true;
+      group.add(canopy);
+      const canopy2Geo = new THREE.SphereGeometry(1.0, 6, 5);
+      const canopy2 = new THREE.Mesh(canopy2Geo, canopyMat);
+      canopy2.position.set(0.5, 4.2, 0.3);
+      group.add(canopy2);
+      group.position.set(ob.pos[0], 0, ob.pos[2]);
+      group.rotation.y = Math.random() * Math.PI * 2;
+      scene.add(group);
+      obstacleMeshes.set(key, group);
+    } else if (ob.type === 'water') {
+      const group = new THREE.Group();
+      const waterGeo = new THREE.CircleGeometry(ob.radius, 24);
+      waterGeo.rotateX(-Math.PI / 2);
+      const waterMat = new THREE.MeshStandardMaterial({ color: 0x1a4a7a, transparent: true, opacity: 0.7, roughness: 0.1, metalness: 0.3, side: THREE.DoubleSide });
+      const water = new THREE.Mesh(waterGeo, waterMat);
+      water.position.y = 0.03;
+      group.add(water);
+      const edgeGeo = new THREE.RingGeometry(ob.radius - 0.3, ob.radius + 0.2, 24);
+      edgeGeo.rotateX(-Math.PI / 2);
+      const edgeMat = new THREE.MeshBasicMaterial({ color: 0x3a6a4a, transparent: true, opacity: 0.5, side: THREE.DoubleSide });
+      const edge = new THREE.Mesh(edgeGeo, edgeMat);
+      edge.position.y = 0.04;
+      group.add(edge);
+      group.position.set(ob.pos[0], 0, ob.pos[2]);
+      scene.add(group);
+      obstacleMeshes.set(key, group);
+    }
   }
 }
 
@@ -231,8 +281,8 @@ function gameLoop() {
           predictedZ *= s;
         }
         // Client-side obstacle prediction
-        if (state.obstacles) {
-          for (const ob of state.obstacles) {
+        if (cachedObstacles.length > 0) {
+          for (const ob of cachedObstacles) {
             const odx = predictedX - ob.pos[0], odz = predictedZ - ob.pos[2];
             const odist = Math.sqrt(odx * odx + odz * odz);
             const minD = ob.radius + 0.5;
@@ -438,8 +488,10 @@ function processState(state, dt) {
       mesh.rotation.y = w.angle || 0;
       mesh.castShadow = true;
       scene.add(mesh);
-      knownWalls.set(w.id, { mesh, mat, maxHp: w.maxHp || 80 });
+      knownWalls.set(w.id, { mesh, mat, maxHp: w.maxHp || 120 });
       playWallPlace();
+      spawnSparks(w.pos[0], w.pos[2], 0x4488ff, 4);
+      spawnDustPuff(w.pos[0], w.pos[2]);
     }
     const wData = knownWalls.get(w.id);
     if (wData) {
@@ -451,54 +503,6 @@ function processState(state, dt) {
       const g = 0.53 * hpRatio;
       const b = 0.6 * hpRatio;
       wData.mat.color.setRGB(r, g, b);
-    }
-  }
-
-  // Sync environment obstacles (trees + water)
-  if (state.obstacles) {
-    for (const ob of state.obstacles) {
-      const key = ob.type + '_' + ob.pos[0] + '_' + ob.pos[2];
-      if (obstacleMeshes.has(key)) continue;
-      if (ob.type === 'tree') {
-        const group = new THREE.Group();
-        const trunkGeo = new THREE.CylinderGeometry(0.3, 0.4, 3, 6);
-        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c3a1e, roughness: 0.9 });
-        const trunk = new THREE.Mesh(trunkGeo, trunkMat);
-        trunk.position.y = 1.5;
-        trunk.castShadow = true;
-        group.add(trunk);
-        const canopyGeo = new THREE.SphereGeometry(1.4, 8, 6);
-        const canopyMat = new THREE.MeshStandardMaterial({ color: 0x2d5a1e, roughness: 0.8 });
-        const canopy = new THREE.Mesh(canopyGeo, canopyMat);
-        canopy.position.y = 3.5;
-        canopy.castShadow = true;
-        group.add(canopy);
-        const canopy2Geo = new THREE.SphereGeometry(1.0, 6, 5);
-        const canopy2 = new THREE.Mesh(canopy2Geo, canopyMat);
-        canopy2.position.set(0.5, 4.2, 0.3);
-        group.add(canopy2);
-        group.position.set(ob.pos[0], 0, ob.pos[2]);
-        group.rotation.y = Math.random() * Math.PI * 2;
-        scene.add(group);
-        obstacleMeshes.set(key, group);
-      } else if (ob.type === 'water') {
-        const group = new THREE.Group();
-        const waterGeo = new THREE.CircleGeometry(ob.radius, 24);
-        waterGeo.rotateX(-Math.PI / 2);
-        const waterMat = new THREE.MeshStandardMaterial({ color: 0x1a4a7a, transparent: true, opacity: 0.7, roughness: 0.1, metalness: 0.3, side: THREE.DoubleSide });
-        const water = new THREE.Mesh(waterGeo, waterMat);
-        water.position.y = 0.03;
-        group.add(water);
-        const edgeGeo = new THREE.RingGeometry(ob.radius - 0.3, ob.radius + 0.2, 24);
-        edgeGeo.rotateX(-Math.PI / 2);
-        const edgeMat = new THREE.MeshBasicMaterial({ color: 0x3a6a4a, transparent: true, opacity: 0.5, side: THREE.DoubleSide });
-        const edge = new THREE.Mesh(edgeGeo, edgeMat);
-        edge.position.y = 0.04;
-        group.add(edge);
-        group.position.set(ob.pos[0], 0, ob.pos[2]);
-        scene.add(group);
-        obstacleMeshes.set(key, group);
-      }
     }
   }
 
@@ -552,7 +556,7 @@ function handleEvent(ev) {
       corpseMesh.rotation.y = Math.random() * Math.PI * 2;
       scene.add(corpseMesh);
       corpses.push(corpseMesh);
-      if (corpses.length > 50) { const old = corpses.shift(); scene.remove(old); old.material.dispose(); }
+      if (corpses.length > 25) { const old = corpses.shift(); scene.remove(old); old.material.dispose(); }
       // Score popup at kill location
       const combo = ev.combo || 0;
       const wave = getState()?.wave || 1;
@@ -594,6 +598,11 @@ function handleEvent(ev) {
     case 'wave': {
       hideUpgradeShop();
       playWaveStart();
+      break;
+    }
+    case 'obstacles': {
+      cachedObstacles = ev.obstacles || [];
+      syncObstacleMeshes(cachedObstacles);
       break;
     }
     case 'boss': {

@@ -96,6 +96,11 @@ export class Room {
     this.players.set(id, player);
     if (this.cleanupTimer) { clearTimeout(this.cleanupTimer); this.cleanupTimer = null; }
     this.broadcast({ t: 'join', id, name: player.name });
+    // Send obstacles to new player
+    const obs = this.obstacles
+      .filter(o => o.type === 'tree' || o.active)
+      .map(o => ({ type: o.type, pos: [Math.round(o.x * 100) / 100, 0, Math.round(o.z * 100) / 100], radius: o.radius }));
+    this.sendTo(id, { t: 'obstacles', obstacles: obs });
     return player;
   }
 
@@ -169,12 +174,9 @@ export class Room {
     for (const [, w] of this.walls) {
       walls.push({ id: w.id, pos: [w.x, 0, w.z], angle: w.angle, hp: w.hp, maxHp: w.maxHp });
     }
-    const obstacles = this.obstacles
-      .filter(o => o.type === 'tree' || o.active)
-      .map(o => ({ type: o.type, pos: [Math.round(o.x * 100) / 100, 0, Math.round(o.z * 100) / 100], radius: o.radius }));
     return {
       t: 'state', tick: this.tick,
-      players, enemies, pickups, projectiles, walls, obstacles,
+      players, enemies, pickups, projectiles, walls,
       wave: this.wave, score: this.score, combo: this.combo, phase: this.state,
       arenaRadius: this.arenaRadius, waveTimer: this.waveTimer,
       playerCount: this.playerCount,

@@ -43,13 +43,13 @@ export const PICKUP_DROP_BASE = 0.15;
 export const PICKUP_DROP_COMBO_BONUS = 0.02;
 
 export const WALL = {
-  hp: 100,
-  charges: 5,
-  cooldown: 8000,
-  placeCooldown: 350,
+  hp: 120,
+  charges: 8,
+  cooldown: 5000,
+  placeCooldown: 200,
   halfWidth: 2.0,
   halfDepth: 0.4,
-  lifetime: 45000,
+  lifetime: 60000,
 };
 
 export const DASH = {
@@ -83,8 +83,8 @@ export const OBSTACLES = {
   waterSeparation: 10,
 };
 
-export const ARENA_SHRINK_PER_WAVE = 1.5;
-export const ARENA_MIN_RADIUS = 15;
+export const ARENA_SHRINK_PER_WAVE = 2;
+export const ARENA_MIN_RADIUS = 12;
 export const ARENA_OUTSIDE_DPS = 5;
 
 export const COMBO_DECAY_MS = 2500;
@@ -98,10 +98,10 @@ export const COMBO_TIERS = [
 ];
 
 export const SCALING = {
-  hpPerWave: 0.1,
+  hpPerWave: 0.15,
   speedPerWave: 0.03,
   speedCap: 0.6,
-  damagePerWave: 0.05,
+  damagePerWave: 0.08,
   bossHpBase: 200,
   bossHpPerBoss: 50,
 };
@@ -143,11 +143,12 @@ export const WEAPONS = {
   flamethrower: { bullets: 3, spread: 0.4, cooldown: 80,  damageMult: 0.3, speed: 15, pierce: 0, range: 500 },
 };
 
-export const PLAYER_COUNT_SCALING = [0, 1, 1.5, 2, 2.5];
+export const PLAYER_COUNT_SCALING = [0, 1, 1.4, 1.8, 2.2];
+export const MAX_ENEMIES = 30;
 
 export function waveEnemyCount(wave, playerCount) {
   const base = 3 + wave * 2;
-  return Math.ceil(base * PLAYER_COUNT_SCALING[playerCount]);
+  return Math.min(MAX_ENEMIES, Math.ceil(base * PLAYER_COUNT_SCALING[playerCount]));
 }
 
 export function enemyTypesForWave(wave) {

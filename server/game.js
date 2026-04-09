@@ -674,8 +674,15 @@ function spawnWave(room) {
   room.arenaRadius = Math.max(ARENA_MIN_RADIUS, ARENA_RADIUS - (wave - 1) * ARENA_SHRINK_PER_WAVE);
   // Activate water obstacles from wave 5+
   if (wave >= OBSTACLES.waterStartWave) {
+    let waterActivated = false;
     for (const ob of room.obstacles) {
-      if (ob.type === 'water') ob.active = true;
+      if (ob.type === 'water' && !ob.active) { ob.active = true; waterActivated = true; }
+    }
+    if (waterActivated) {
+      const obs = room.obstacles
+        .filter(o => o.type === 'tree' || o.active)
+        .map(o => ({ type: o.type, pos: [Math.round(o.x * 100) / 100, 0, Math.round(o.z * 100) / 100], radius: o.radius }));
+      room.broadcast({ t: 'obstacles', obstacles: obs });
     }
   }
   const isBossWave = wave % 5 === 0 && wave > 0;

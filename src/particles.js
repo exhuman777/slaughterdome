@@ -2,7 +2,7 @@ import * as THREE from 'https://esm.sh/three@0.162.0';
 import { scene } from './renderer.js';
 
 const particles = [];
-const MAX_PARTICLES = 200;
+const MAX_PARTICLES = 150;
 
 // Shared geometries - never recreated
 const boxGeo = new THREE.BoxGeometry(0.2, 0.2, 0.2);
@@ -11,10 +11,19 @@ const dropGeo = new THREE.SphereGeometry(0.08, 4, 4);
 const dustGeo = new THREE.BoxGeometry(0.1, 0.1, 0.1);
 const trailGeo = new THREE.BoxGeometry(0.15, 0.05, 0.15);
 
+// Material pool -- reuse materials by color
+const matPool = new Map();
+function getMat(color) {
+  if (matPool.has(color)) return matPool.get(color);
+  const mat = new THREE.MeshBasicMaterial({ color, transparent: true });
+  matPool.set(color, mat);
+  return mat;
+}
+
 export function spawnKillParticles(x, z, color) {
-  const count = 6;
+  const count = 4;
   for (let i = 0; i < count && particles.length < MAX_PARTICLES; i++) {
-    const mat = new THREE.MeshBasicMaterial({ color, transparent: true });
+    const mat = getMat(color);
     const mesh = new THREE.Mesh(boxGeo, mat);
     mesh.position.set(x, 0.8, z);
     const angle = Math.random() * Math.PI * 2;
@@ -29,9 +38,9 @@ export function spawnKillParticles(x, z, color) {
 }
 
 export function spawnSparks(x, z, color, count) {
-  count = Math.min(count || 4, 6);
+  count = Math.min(count || 4, 4);
   for (let i = 0; i < count && particles.length < MAX_PARTICLES; i++) {
-    const mat = new THREE.MeshBasicMaterial({ color, transparent: true });
+    const mat = getMat(color);
     const mesh = new THREE.Mesh(sparkGeo, mat);
     mesh.position.set(x + (Math.random() - 0.5) * 0.5, 1 + Math.random(), z + (Math.random() - 0.5) * 0.5);
     const angle = Math.random() * Math.PI * 2;
@@ -54,13 +63,13 @@ export function spawnNeonPop(x, z, color, size) {
   const mesh = new THREE.Mesh(ringGeo, mat);
   mesh.position.set(x, 0.3, z);
   scene.add(mesh);
-  particles.push({ mesh, mat, vx: 0, vy: 0, vz: 0, life: 0.3, decay: 3, isNeonPop: true, targetSize: size, disposeGeo: true });
+  particles.push({ mesh, mat, vx: 0, vy: 0, vz: 0, life: 0.3, decay: 3, isNeonPop: true, targetSize: size, disposeGeo: true, ownsMat: true });
 }
 
 export function spawnBloodDrops(x, z) {
-  const count = 4;
+  const count = 3;
   for (let i = 0; i < count && particles.length < MAX_PARTICLES; i++) {
-    const mat = new THREE.MeshBasicMaterial({ color: 0xcc0000, transparent: true });
+    const mat = getMat(0xcc0000);
     const mesh = new THREE.Mesh(dropGeo, mat);
     mesh.position.set(
       x + (Math.random() - 0.5) * 1.5,
@@ -79,8 +88,8 @@ export function spawnBloodDrops(x, z) {
 }
 
 export function spawnDustPuff(x, z) {
-  for (let i = 0; i < 3 && particles.length < MAX_PARTICLES; i++) {
-    const mat = new THREE.MeshBasicMaterial({ color: 0x997755, transparent: true });
+  for (let i = 0; i < 2 && particles.length < MAX_PARTICLES; i++) {
+    const mat = getMat(0x997755);
     const mesh = new THREE.Mesh(dustGeo, mat);
     mesh.position.set(x + (Math.random() - 0.5) * 0.5, 0.2, z + (Math.random() - 0.5) * 0.5);
     const angle = Math.random() * Math.PI * 2;
@@ -96,7 +105,7 @@ export function spawnDustPuff(x, z) {
 
 export function spawnSpeedTrail(x, z, color) {
   if (particles.length >= MAX_PARTICLES) return;
-  const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.5 });
+  const mat = getMat(color);
   const mesh = new THREE.Mesh(trailGeo, mat);
   mesh.position.set(x, 0.3, z);
   scene.add(mesh);
@@ -104,10 +113,10 @@ export function spawnSpeedTrail(x, z, color) {
 }
 
 export function spawnGoreChunks(x, z) {
-  const count = 8;
+  const count = 5;
   for (let i = 0; i < count && particles.length < MAX_PARTICLES; i++) {
     const color = Math.random() > 0.3 ? 0xaa0000 : 0x660000;
-    const mat = new THREE.MeshBasicMaterial({ color, transparent: true });
+    const mat = getMat(color);
     const mesh = new THREE.Mesh(boxGeo, mat);
     mesh.position.set(x + (Math.random() - 0.5), 0.8, z + (Math.random() - 0.5));
     const angle = Math.random() * Math.PI * 2;
@@ -129,7 +138,7 @@ export function spawnAoeRing(x, z, radius, color) {
   mesh.position.set(x, 0.15, z);
   mesh.rotation.x = Math.PI / 2;
   scene.add(mesh);
-  particles.push({ mesh, mat, vx: 0, vy: 0, vz: 0, life: 0.4, decay: 2.5, isRing: true, targetRadius: radius, disposeGeo: true });
+  particles.push({ mesh, mat, vx: 0, vy: 0, vz: 0, life: 0.4, decay: 2.5, isRing: true, targetRadius: radius, disposeGeo: true, ownsMat: true });
 }
 
 export function spawnFloatingText(x, z, text, color, scale, fontOverride) {
@@ -152,7 +161,7 @@ export function spawnFloatingText(x, z, text, color, scale, fontOverride) {
   const s = scale || 2;
   sprite.scale.set(s * 2, s, 1);
   scene.add(sprite);
-  particles.push({ mesh: sprite, mat, vx: 0, vy: 3, vz: 0, life: 1, decay: 1, isSprite: true });
+  particles.push({ mesh: sprite, mat, vx: 0, vy: 3, vz: 0, life: 1, decay: 1, isSprite: true, ownsMat: true });
 }
 
 export function updateParticles(dt) {
@@ -161,13 +170,17 @@ export function updateParticles(dt) {
     p.life -= dt * p.decay;
     if (p.life <= 0) {
       scene.remove(p.mesh);
-      if (p.mat.map) p.mat.map.dispose();
-      p.mat.dispose();
+      // Only dispose non-pooled materials (sprites, rings with unique textures)
+      if (p.ownsMat) {
+        if (p.mat.map) p.mat.map.dispose();
+        p.mat.dispose();
+      }
       if (p.disposeGeo) p.mesh.geometry.dispose();
       particles.splice(i, 1);
       continue;
     }
-    p.mat.opacity = Math.min(1, p.life * 2);
+    // Pooled materials are shared -- only set opacity on owned materials
+    if (p.ownsMat) p.mat.opacity = Math.min(1, p.life * 2);
     if (p.isNeonPop) {
       const t = 1 - p.life * p.decay;
       const s = Math.max(0.1, t * p.targetSize);
