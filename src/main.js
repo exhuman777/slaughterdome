@@ -1,6 +1,6 @@
 import { initRenderer, render, clock, updateCamera, setCamDt } from './renderer.js';
 import { createArena, setBiome, updateBiome, updateArenaRadius } from './arena.js';
-import { createPlayerMesh, updatePlayerMesh, setPlayerRotation, setPlayerDashing, removePlayerMesh, markLocalPlayer, flashPlayer, updateAfterimages } from './player.js';
+import { createPlayerMesh, updatePlayerMesh, setPlayerRotation, setPlayerDashing, removePlayerMesh, markLocalPlayer, flashPlayer, updateAfterimages, loadCharacters } from './player.js';
 import { createEnemyMesh, updateEnemyMesh, flashEnemy, removeEnemyMesh, removeAllEnemies, updateDyingEnemies } from './enemy.js';
 import { updatePickups as updatePickupMeshes, syncPickups } from './pickups.js';
 import { updateParticles, spawnKillParticles, spawnSparks, spawnBloodDrops, spawnDustPuff, spawnSpeedTrail, spawnFloatingText, spawnGoreChunks } from './particles.js';
@@ -10,8 +10,10 @@ import { showGunShot, showSpecialAttack, showDamageNumber, showExplosion, showHi
 import { playHit, playKill, playExplosion, playWaveStart, playBossSpawn, playPickup, playDeath, playCombo, resumeAudio, playShot, playWallPlace, playDash, playWallDestroy, playWaveClear, playSword } from './audio.js';
 import { getInput, getMobileInput, isMobile, setupMobileControls, isWallMode, exitWallMode, resetInput } from './input.js';
 import { connect, sendInput, sendPing, getState, getMyId, getPing, drainEvents, disconnect } from './network.js';
-import { showTitle, showHUD, showGameOver, updateHUD, showCombo, updatePing, getPlayerName, updateUpgradeDisplay, updateWeaponHUD, showControlsHint, hideControlsHint, updateCountdown, updateAbilities, updateInfo, updatePlayers, showYouDied, hideYouDied, updateWallMode } from './ui.js';
+import { showTitle, showHUD, showGameOver, updateHUD, showCombo, updatePing, getPlayerName, updateUpgradeDisplay, updateWeaponHUD, showControlsHint, hideControlsHint, updateCountdown, updateAbilities, updateInfo, updatePlayers, showYouDied, hideYouDied, updateWallMode, showGameTip, showArenaWarn } from './ui.js';
 import { showUpgradeShop, hideUpgradeShop } from './upgrades.js';
+import { loadModels, modelsReady, cloneTree } from './models.js';
+import { loadDecorations, buildArenaDecorations, clearDecorations } from './decorations.js';
 
 // Screen edge damage pulse
 const flashOverlay = document.getElementById('flash-overlay');
@@ -27,6 +29,10 @@ function pulseDamageOverlay() {
 
 initRenderer();
 createArena();
+initProjPool();
+loadModels(); // async -- trees use loaded models when ready, fallback to procedural
+loadCharacters(); // async -- player characters use loaded models when ready
+loadDecorations(); // async -- ruins environment decorations
 showTitle();
 
 let gameActive = false;
@@ -83,6 +89,45 @@ let wasAlive = true;
 let lastComboTier = 0;
 const COMBO_TIER_THRESHOLDS = [5, 10, 15, 20, 30, 50];
 
+// Time scaling for dramatic slow-mo
+let timeScale = 1.0;
+let slowMoReturn = 2.0;
+function triggerSlowMo(scale, speed) {
+  timeScale = scale || 0.3;
+  slowMoReturn = speed || 2.0;
+}
+
+// Projectile object pool (avoids GC from constant mesh creation)
+const projPool = { bullet: [], spit: [] };
+function initProjPool() {
+  for (let i = 0; i < 40; i++) {
+    const b = new THREE.Mesh(bulletGeo, bulletMat);
+    b.visible = false; b.position.y = -100;
+    scene.add(b);
+    projPool.bullet.push(b);
+  }
+  for (let i = 0; i < 15; i++) {
+    const s = new THREE.Mesh(spitGeo, spitMat);
+    s.visible = false; s.position.y = -100;
+    scene.add(s);
+    projPool.spit.push(s);
+  }
+}
+function acquireProj(isBullet) {
+  const pool = isBullet ? projPool.bullet : projPool.spit;
+  if (pool.length > 0) { const m = pool.pop(); m.visible = true; return m; }
+  const m = new THREE.Mesh(isBullet ? bulletGeo : spitGeo, isBullet ? bulletMat : spitMat);
+  scene.add(m);
+  return m;
+}
+function releaseProj(mesh, isBullet) {
+  mesh.visible = false; mesh.position.y = -100;
+  (isBullet ? projPool.bullet : projPool.spit).push(mesh);
+}
+
+// Near-miss detection (triggers during dashes for skill reward)
+const nearMissed = new Set();
+
 if (isMobile()) setupMobileControls();
 
 document.getElementById('play-btn').addEventListener('click', startGame);
@@ -106,18 +151,21 @@ function quitToMenu() {
   updateWallMode(false);
   ghostWall.visible = false;
   removeAllEnemies();
-  for (const [id, data] of knownProjectiles) { scene.remove(data.mesh); }
+  for (const [id, data] of knownProjectiles) { releaseProj(data.mesh, data.isBullet); }
   knownProjectiles.clear();
   for (const [id, data] of knownWalls) { scene.remove(data.mesh); data.mat.dispose(); }
   knownWalls.clear();
   for (const [id] of knownPlayers) { removePlayerMesh(id); }
   knownPlayers.clear();
   knownEnemies.clear();
+  nearMissed.clear();
+  timeScale = 1.0;
   for (const c of corpses) { scene.remove(c); c.material.dispose(); }
   corpses.length = 0;
   for (const [, mesh] of obstacleMeshes) { scene.remove(mesh); }
   obstacleMeshes.clear();
   cachedObstacles = [];
+  clearDecorations();
   showTitle();
 }
 
@@ -135,7 +183,7 @@ async function startGame() {
     knownPlayers.clear();
     knownEnemies.clear();
     removeAllEnemies();
-    for (const [id, data] of knownProjectiles) { scene.remove(data.mesh); }
+    for (const [id, data] of knownProjectiles) { releaseProj(data.mesh, data.isBullet); }
     knownProjectiles.clear();
     for (const [id, data] of knownWalls) { scene.remove(data.mesh); data.mat.dispose(); }
     knownWalls.clear();
@@ -144,6 +192,8 @@ async function startGame() {
     for (const [, mesh] of obstacleMeshes) { scene.remove(mesh); }
     obstacleMeshes.clear();
     cachedObstacles = [];
+    nearMissed.clear();
+    timeScale = 1.0;
       hasPrediction = false;
     predDashTimer = 0;
     serverOverheated = false;
@@ -152,33 +202,36 @@ async function startGame() {
     hideYouDied();
     markLocalPlayer(getMyId());
     scene.add(ghostWall);
+    buildArenaDecorations(40);
   } catch (err) {
     console.error('Connection failed:', err);
   }
 }
 
+let treeIdx = 0;
 function syncObstacleMeshes(obstacles) {
   for (const ob of obstacles) {
     const key = ob.type + '_' + ob.pos[0] + '_' + ob.pos[2];
     if (obstacleMeshes.has(key)) continue;
     if (ob.type === 'tree') {
-      const group = new THREE.Group();
-      const trunkGeo = new THREE.CylinderGeometry(0.3, 0.4, 3, 6);
-      const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c3a1e, roughness: 0.9 });
-      const trunk = new THREE.Mesh(trunkGeo, trunkMat);
-      trunk.position.y = 1.5;
-      trunk.castShadow = true;
-      group.add(trunk);
-      const canopyGeo = new THREE.SphereGeometry(1.4, 8, 6);
-      const canopyMat = new THREE.MeshStandardMaterial({ color: 0x2d5a1e, roughness: 0.8 });
-      const canopy = new THREE.Mesh(canopyGeo, canopyMat);
-      canopy.position.y = 3.5;
-      canopy.castShadow = true;
-      group.add(canopy);
-      const canopy2Geo = new THREE.SphereGeometry(1.0, 6, 5);
-      const canopy2 = new THREE.Mesh(canopy2Geo, canopyMat);
-      canopy2.position.set(0.5, 4.2, 0.3);
-      group.add(canopy2);
+      let group = cloneTree(treeIdx++);
+      if (!group) {
+        // Fallback: procedural tree if models not loaded yet
+        group = new THREE.Group();
+        const trunkGeo = new THREE.CylinderGeometry(0.3, 0.4, 3, 6);
+        const trunkMat2 = new THREE.MeshStandardMaterial({ color: 0x5c3a1e, roughness: 0.9 });
+        const trunk = new THREE.Mesh(trunkGeo, trunkMat2);
+        trunk.position.y = 1.5; trunk.castShadow = true;
+        group.add(trunk);
+        const canopyGeo = new THREE.SphereGeometry(1.4, 8, 6);
+        const canopyMat2 = new THREE.MeshStandardMaterial({ color: 0x2d5a1e, roughness: 0.8 });
+        const canopy = new THREE.Mesh(canopyGeo, canopyMat2);
+        canopy.position.y = 3.5; canopy.castShadow = true;
+        group.add(canopy);
+      }
+      // Random scale variation for natural look
+      const sv = 0.85 + Math.random() * 0.3;
+      group.scale.set(sv, sv, sv);
       group.position.set(ob.pos[0], 0, ob.pos[2]);
       group.rotation.y = Math.random() * Math.PI * 2;
       scene.add(group);
@@ -211,7 +264,10 @@ function gameLoop() {
   const now = performance.now();
   const dtMs = Math.min(now - lastFrameTime, 100); // Cap at 100ms to prevent physics explosions
   lastFrameTime = now;
-  const dt = Math.min(clock.getDelta(), 0.1);
+  const rawDt = Math.min(clock.getDelta(), 0.1);
+  if (timeScale < 1.0) timeScale = Math.min(timeScale + slowMoReturn * rawDt, 1.0);
+  const dt = rawDt;
+  const visualDt = rawDt * timeScale;
   setCamDt(dt);
 
   if (gameActive) {
@@ -366,12 +422,12 @@ function gameLoop() {
     if (state) processState(state, dt);
   }
 
-  updateBiome(dt);
-  updatePickupMeshes(dt);
-  updateParticles(dt);
-  updateCombatVisuals(dt);
-  updateDyingEnemies(dt);
-  updateAfterimages(dt);
+  updateBiome(visualDt);
+  updatePickupMeshes(visualDt);
+  updateParticles(visualDt);
+  updateCombatVisuals(visualDt);
+  updateDyingEnemies(visualDt);
+  updateAfterimages(visualDt);
 
   const myId = getMyId();
   const state = getState();
@@ -451,21 +507,19 @@ function processState(state, dt) {
     }
   });
 
-  // Sync projectiles
+  // Sync projectiles (object pooled)
   const serverProjIds = new Set((state.projectiles || []).map(p => p.id));
   for (const [id, data] of knownProjectiles) {
-    if (!serverProjIds.has(id)) { scene.remove(data.mesh); knownProjectiles.delete(id); }
+    if (!serverProjIds.has(id)) { releaseProj(data.mesh, data.isBullet); knownProjectiles.delete(id); }
   }
   for (const pr of (state.projectiles || [])) {
     if (!knownProjectiles.has(pr.id)) {
       const isBullet = pr.type === 'bullet';
-      const mesh = new THREE.Mesh(isBullet ? bulletGeo : spitGeo, isBullet ? bulletMat : spitMat);
+      const mesh = acquireProj(isBullet);
       mesh.position.set(pr.pos[0], 1.2, pr.pos[2]);
-      scene.add(mesh);
-      knownProjectiles.set(pr.id, { mesh });
+      knownProjectiles.set(pr.id, { mesh, isBullet });
     } else {
-      const data = knownProjectiles.get(pr.id);
-      data.mesh.position.set(pr.pos[0], 1.2, pr.pos[2]);
+      knownProjectiles.get(pr.id).mesh.position.set(pr.pos[0], 1.2, pr.pos[2]);
     }
   }
 
@@ -528,6 +582,29 @@ function processState(state, dt) {
   updateCountdown(state.phase, state.waveTimer);
   updatePlayers(state.playerCount || 1);
 
+  // Near-miss detection during dashes
+  if (predDashTimer > 0) {
+    const me3 = state.players.find(p => p.id === myId);
+    if (me3 && me3.alive) {
+      const npx = hasPrediction ? predictedX : me3.pos[0];
+      const npz = hasPrediction ? predictedZ : me3.pos[2];
+      for (const e of state.enemies) {
+        if (nearMissed.has(e.id)) continue;
+        const ndx = e.pos[0] - npx, ndz = e.pos[2] - npz;
+        if (ndx * ndx + ndz * ndz < 6.25) { // 2.5^2
+          nearMissed.add(e.id);
+          spawnFloatingText(npx + 1.5, npz, 'NEAR MISS', '#44ddff', 1.5);
+          triggerSlowMo(0.4, 4.0); // brief micro slow-mo on near miss
+        }
+      }
+    }
+  }
+  // Clean stale near-miss entries
+  if (nearMissed.size > 0) {
+    const liveIds = new Set(state.enemies.map(e => e.id));
+    for (const id of nearMissed) { if (!liveIds.has(id)) nearMissed.delete(id); }
+  }
+
   setBiome(state.wave);
   showCombo(state.combo);
 
@@ -583,7 +660,8 @@ function handleEvent(ev) {
       break;
     }
     case 'upgrades': {
-      // Wave cleared -- celebrate before showing shop
+      // Wave cleared -- slow-mo + celebrate before showing shop
+      triggerSlowMo(0.2, 1.5);
       const meNow = getState()?.players?.find(p => p.id === getMyId());
       const px2 = meNow ? (hasPrediction ? predictedX : meNow.pos[0]) : 0;
       const pz2 = meNow ? (hasPrediction ? predictedZ : meNow.pos[2]) : 0;
@@ -598,6 +676,11 @@ function handleEvent(ev) {
     case 'wave': {
       hideUpgradeShop();
       playWaveStart();
+      const waveNum2 = getState()?.wave || 1;
+      if (waveNum2 === 1) showGameTip('[E] BUILD WALLS -- block enemies and control the arena!', 8000);
+      else if (waveNum2 === 2) showGameTip('WALLS block enemy movement and projectiles!', 6000);
+      else if (waveNum2 === 3) showGameTip('DASH through enemies for NEAR MISS bonus!', 5000);
+      if (waveNum2 >= 2) showArenaWarn(2500);
       break;
     }
     case 'obstacles': {
@@ -606,6 +689,7 @@ function handleEvent(ev) {
       break;
     }
     case 'boss': {
+      triggerSlowMo(0.15, 1.0);
       playBossSpawn();
       break;
     }

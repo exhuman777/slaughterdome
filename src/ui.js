@@ -153,7 +153,7 @@ export function updateCountdown(phase, timerMs) {
   if (!countdownEl) return;
   if (phase === 'countdown' && timerMs > 0) {
     const secs = Math.ceil(timerMs / 1000);
-    countdownEl.textContent = 'NEXT WAVE IN ' + secs;
+    countdownEl.textContent = 'NEXT WAVE IN ' + secs + ' -- ARENA SHRINKS';
     countdownEl.style.display = 'block';
   } else {
     countdownEl.style.display = 'none';
@@ -197,6 +197,27 @@ function hideInfo() { if (infoEl) infoEl.style.display = 'none'; }
 export function updateInfo(kills) {
   if (!infoEl) return;
   infoEl.innerHTML = '<div class="info-row">KILLS: <span style="color:#fff">' + kills + '</span></div>';
+}
+
+// Game tips
+const gameTipEl = document.getElementById('game-tip');
+const arenaWarnEl = document.getElementById('arena-warn');
+let tipTimeout = null;
+let warnTimeout = null;
+
+export function showGameTip(text, duration) {
+  if (!gameTipEl) return;
+  gameTipEl.textContent = text;
+  gameTipEl.style.display = 'block';
+  clearTimeout(tipTimeout);
+  tipTimeout = setTimeout(() => { gameTipEl.style.display = 'none'; }, duration || 5000);
+}
+
+export function showArenaWarn(duration) {
+  if (!arenaWarnEl) return;
+  arenaWarnEl.style.display = 'block';
+  clearTimeout(warnTimeout);
+  warnTimeout = setTimeout(() => { arenaWarnEl.style.display = 'none'; }, duration || 2500);
 }
 
 // Player count
