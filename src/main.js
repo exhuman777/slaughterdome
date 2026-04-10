@@ -57,6 +57,7 @@ loadMonsterModels().catch(e => console.warn('Monster models failed:', e));
 const knownWalls = new Map();
 const wallGeo = new THREE.BoxGeometry(4, 2.5, 0.5);
 const WALL_COLORS = [0x4488ff, 0x44aaff, 0x6644cc, 0x3399ff, 0x5577ee, 0x2266dd, 0x7744bb, 0x3388cc];
+const _dmgColor = new THREE.Color(0xff2222);
 let wallColorIdx = 0;
 
 // Wall placement preview ghost
@@ -557,12 +558,10 @@ function processState(state, dt) {
     if (wData) {
       const hpRatio = Math.max(0, w.hp / wData.maxHp);
       wData.mat.opacity = 0.5 + hpRatio * 0.5;
-      // Blend from base color toward red as wall takes damage
-      const base = new THREE.Color(wData.baseColor || 0x4488ff);
-      const dmg = new THREE.Color(0xff2222);
-      wData.mat.color.copy(base).lerp(dmg, 1 - hpRatio);
-      wData.mat.emissive.copy(base).lerp(dmg, 1 - hpRatio);
-      wData.mat.emissiveIntensity = 0.3 + (1 - hpRatio) * 0.4;
+      const dmgT = 1 - hpRatio;
+      wData.mat.color.set(wData.baseColor || 0x4488ff).lerp(_dmgColor, dmgT);
+      wData.mat.emissive.set(wData.baseColor || 0x4488ff).lerp(_dmgColor, dmgT);
+      wData.mat.emissiveIntensity = 0.3 + dmgT * 0.4;
     }
   }
 
