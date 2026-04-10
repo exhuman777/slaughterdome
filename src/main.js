@@ -2,8 +2,8 @@ import { initRenderer, render, clock, updateCamera, setCamDt } from './renderer.
 import { createArena, setBiome, updateBiome, updateArenaRadius } from './arena.js';
 import { createPlayerMesh, updatePlayerMesh, setPlayerRotation, setPlayerDashing, removePlayerMesh, markLocalPlayer, flashPlayer, updateAfterimages, loadCharacters } from './player.js';
 import { createEnemyMesh, updateEnemyMesh, flashEnemy, removeEnemyMesh, removeAllEnemies, updateDyingEnemies, loadMonsterModels } from './enemy.js';
-import { updatePickups as updatePickupMeshes, syncPickups } from './pickups.js';
-import { updateParticles, spawnKillParticles, spawnSparks, spawnBloodDrops, spawnDustPuff, spawnSpeedTrail, spawnFloatingText, spawnGoreChunks } from './particles.js';
+import { updatePickups as updatePickupMeshes, syncPickups, loadPickupModels } from './pickups.js';
+import { updateParticles, spawnKillParticles, spawnSparks, spawnBloodDrops, spawnDustPuff, spawnSpeedTrail, spawnFloatingText, spawnGoreChunks, setParticleLimit } from './particles.js';
 import * as THREE from 'https://esm.sh/three@0.162.0';
 import { scene } from './renderer.js';
 import { showGunShot, showSpecialAttack, showDamageNumber, showExplosion, showHitImpact, updateCombatVisuals, showSwordSlash } from './combat.js';
@@ -52,6 +52,7 @@ loadModels().catch(e => console.warn('Tree models failed:', e));
 loadCharacters().catch(e => console.warn('Character models failed:', e));
 loadDecorations().catch(e => console.warn('Decoration models failed:', e));
 loadMonsterModels().catch(e => console.warn('Monster models failed:', e));
+loadPickupModels().catch(e => console.warn('Pickup models failed:', e));
 
 // Wall rendering
 const knownWalls = new Map();
@@ -77,6 +78,14 @@ let currentArenaRadius = 40;
 let predVelX = 0, predVelZ = 0;
 let prevInputDx = 0, prevInputDz = 0;
 let speedTrailCounter = 0;
+
+// Performance scaling for multiplayer
+let perfMode = false; // true when 2 players
+function setPerfMode(playerCount) {
+  const was = perfMode;
+  perfMode = playerCount >= 2;
+  if (perfMode !== was) setParticleLimit(perfMode ? 100 : 200);
+}
 
 // Persistent corpses / blood pools
 const corpses = [];
@@ -578,7 +587,9 @@ function processState(state, dt) {
     }
   }
   updateCountdown(state.phase, state.waveTimer);
-  updatePlayers(state.playerCount || 1);
+  const pcount = state.playerCount || 1;
+  setPerfMode(pcount);
+  updatePlayers(pcount);
 
   // Near-miss detection during dashes
   if (predDashTimer > 0) {
@@ -621,9 +632,9 @@ function handleEvent(ev) {
       break;
     }
     case 'kill': {
-      spawnGoreChunks(ev.pos[0], ev.pos[2]);
+      if (!perfMode) spawnGoreChunks(ev.pos[0], ev.pos[2]);
       spawnKillParticles(ev.pos[0], ev.pos[2], 0xff4444);
-      spawnBloodDrops(ev.pos[0], ev.pos[2]);
+      if (!perfMode) spawnBloodDrops(ev.pos[0], ev.pos[2]);
       playKill();
       // Blood pool decal (varied size and color)
       const bcolor = BLOOD_COLORS[Math.floor(Math.random() * BLOOD_COLORS.length)];
@@ -636,7 +647,8 @@ function handleEvent(ev) {
       corpseMesh.scale.set(bscale, 1, bscale);
       scene.add(corpseMesh);
       corpses.push(corpseMesh);
-      if (corpses.length > MAX_CORPSES) { const old = corpses.shift(); scene.remove(old); old.material.dispose(); }
+      const corpseLimit = perfMode ? 30 : MAX_CORPSES;
+      if (corpses.length > corpseLimit) { const old = corpses.shift(); scene.remove(old); old.material.dispose(); }
       // Score popup at kill location
       const combo = ev.combo || 0;
       const wave = getState()?.wave || 1;
@@ -658,7 +670,7 @@ function handleEvent(ev) {
         showDamageNumber(ev.pos[0], ev.pos[2], ev.dmg, ev.crit);
         if (!isMe) {
           showHitImpact(ev.pos[0], ev.pos[2]);
-          spawnBloodDrops(ev.pos[0], ev.pos[2]);
+          if (!perfMode) spawnBloodDrops(ev.pos[0], ev.pos[2]);
         }
       }
       playHit(ev.dmg);

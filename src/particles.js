@@ -2,7 +2,8 @@ import * as THREE from 'https://esm.sh/three@0.162.0';
 import { scene } from './renderer.js';
 
 const particles = [];
-const MAX_PARTICLES = 200;
+let MAX_PARTICLES = 200;
+export function setParticleLimit(n) { MAX_PARTICLES = n; }
 
 // Shared geometries - never recreated
 const boxGeo = new THREE.BoxGeometry(0.2, 0.2, 0.2);

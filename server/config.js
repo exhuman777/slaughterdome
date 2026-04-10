@@ -1,7 +1,7 @@
 export const TICK_RATE = 20;
 export const TICK_MS = 1000 / TICK_RATE;
 export const ARENA_RADIUS = 40;
-export const MAX_PLAYERS = 3;
+export const MAX_PLAYERS = 2;
 export const MAX_ROOMS = 3;
 export const GRACE_PERIOD_MS = 5000;
 export const WAVE_REST_MS = 5000;
@@ -143,7 +143,7 @@ export const WEAPONS = {
   flamethrower: { bullets: 3, spread: 0.4, cooldown: 80,  damageMult: 0.3, speed: 15, pierce: 0, range: 500 },
 };
 
-export const PLAYER_COUNT_SCALING = [0, 1, 1.4, 1.8, 2.2];
+export const PLAYER_COUNT_SCALING = [0, 1, 1.4];
 export const MAX_ENEMIES = 30;
 
 export function waveEnemyCount(wave, playerCount) {
