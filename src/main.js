@@ -338,19 +338,7 @@ function gameLoop() {
           predictedX *= s;
           predictedZ *= s;
         }
-        // Client-side obstacle prediction
-        if (cachedObstacles.length > 0) {
-          for (const ob of cachedObstacles) {
-            const odx = predictedX - ob.pos[0], odz = predictedZ - ob.pos[2];
-            const odist = Math.sqrt(odx * odx + odz * odz);
-            const minD = ob.radius + 0.5;
-            if (odist < minD && odist > 0.01) {
-              const push = (minD - odist) / odist;
-              predictedX += odx * push;
-              predictedZ += odz * push;
-            }
-          }
-        }
+        // Client obstacle prediction removed (trees are visual only)
 
         // Direction change dust puff
         if ((input.dx !== 0 || input.dz !== 0) &&

@@ -170,11 +170,7 @@ function updatePlayers(room, dt) {
       const push = wallPush(p.x, p.z, w, 0.5);
       if (push) { p.x += push.x; p.z += push.z; }
     }
-    // Player-obstacle collision
-    for (const ob of room.obstacles) {
-      const push = obstaclePush(p.x, p.z, ob, 0.5);
-      if (push) { p.x += push.x; p.z += push.z; }
-    }
+    // Player-obstacle collision removed (trees/env are visual only)
     // NaN guard
     if (isNaN(p.x) || isNaN(p.z)) { p.x = 0; p.z = 0; }
     const dist = Math.sqrt(p.x * p.x + p.z * p.z);
@@ -519,11 +515,7 @@ function updateEnemies(room, dt) {
         w.hp -= e.damage * dt * 0.15;
       }
     }
-    // Push from obstacles
-    for (const ob of room.obstacles) {
-      const push = obstaclePush(e.x, e.z, ob, 0.6);
-      if (push) { e.x += push.x; e.z += push.z; }
-    }
+    // Enemy-obstacle collision removed (trees/env are visual only)
     // NaN guard for enemies
     if (isNaN(e.x) || isNaN(e.z)) { e.x = 0; e.z = 0; }
     const edist = Math.sqrt(e.x * e.x + e.z * e.z);
@@ -549,17 +541,7 @@ function updateProjectiles(room, dt) {
     if (pr.age > (pr.maxAge || 3000) || Math.sqrt(pr.x * pr.x + pr.z * pr.z) > ARENA_RADIUS + 5) {
       room.projectiles.delete(id); continue;
     }
-    // Projectiles blocked by tree obstacles
-    let hitObstacle = false;
-    for (const ob of room.obstacles) {
-      if (ob.type !== 'tree') continue;
-      const odx = pr.x - ob.x, odz = pr.z - ob.z;
-      if (odx * odx + odz * odz < ob.radius * ob.radius) {
-        room.projectiles.delete(id);
-        hitObstacle = true; break;
-      }
-    }
-    if (hitObstacle) continue;
+    // Projectile-tree collision removed (trees are visual only)
     if (pr.type === 'bullet') {
       // Player bullets hit walls (walls are destructible)
       let hitWall = false;

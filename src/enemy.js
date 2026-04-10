@@ -16,35 +16,47 @@ const MONSTER_FILES = ['grunt', 'dasher', 'brute', 'spitter', 'swarm', 'shielder
 const monsterTemplates = {};
 let modelsLoaded = false;
 
+// Debug overlay for monster loading diagnostics
+const _dbg = document.createElement('div');
+_dbg.style.cssText = 'position:fixed;top:0;right:0;background:rgba(0,0,0,0.85);color:#0f0;font:12px monospace;padding:6px 10px;z-index:9999;max-width:400px;pointer-events:none;';
+document.body.appendChild(_dbg);
+function dbg(msg) { _dbg.textContent += msg + '\n'; console.log('[MONSTER]', msg); }
+
 export async function loadMonsterModels() {
+  dbg('Starting load...');
   try {
     const { GLTFLoader } = await import('https://esm.sh/three@0.162.0/addons/loaders/GLTFLoader.js');
+    dbg('GLTFLoader OK');
     const gltfLoader = new GLTFLoader();
     for (const name of MONSTER_FILES) {
       try {
         const gltf = await new Promise((resolve, reject) => {
           gltfLoader.load('models/monsters/' + name + '.gltf', resolve, null, reject);
         });
-        if (!gltf || !gltf.scene) { console.warn('Monster ' + name + ': no scene'); continue; }
+        if (!gltf || !gltf.scene) { dbg(name + ': NO SCENE'); continue; }
         const visual = ENEMY_VISUALS[name] || ENEMY_VISUALS.grunt;
         const obj = gltf.scene;
+        // Count meshes in loaded model
+        let meshCount = 0;
+        obj.traverse(c => { if (c.isMesh) meshCount++; });
         obj.updateWorldMatrix(true, true);
         const box = new THREE.Box3().setFromObject(obj);
         const sz = new THREE.Vector3();
         box.getSize(sz);
+        dbg(name + ': ' + meshCount + ' meshes, size=' + sz.x.toFixed(2) + 'x' + sz.y.toFixed(2) + 'x' + sz.z.toFixed(2));
         if (sz.y > 0.01) {
           obj.scale.setScalar(visual.height / sz.y);
           obj.updateWorldMatrix(true, true);
           box.setFromObject(obj);
           obj.position.y = -box.min.y;
         }
-        // Replace all materials with bright self-lit materials (original textures too dark)
+        // Replace all materials with bright self-lit materials
         const brightMat = new THREE.MeshStandardMaterial({
           color: visual.color,
-          emissive: visual.emissive,
-          emissiveIntensity: 1.5,
-          roughness: 0.4,
-          metalness: 0.2,
+          emissive: visual.color,
+          emissiveIntensity: 2.0,
+          roughness: 0.3,
+          metalness: 0.1,
         });
         const mats = [];
         obj.traverse(c => {
@@ -54,11 +66,11 @@ export async function loadMonsterModels() {
           mats.push(c.material);
         });
         monsterTemplates[name] = { scene: obj, mats, visual };
-      } catch (e) { console.warn('Monster ' + name + ' failed:', e); }
+      } catch (e) { dbg(name + ': ERR ' + e.message); }
     }
     modelsLoaded = Object.keys(monsterTemplates).length > 0;
-    console.log('Monster models loaded:', Object.keys(monsterTemplates).length + '/' + MONSTER_FILES.length);
-  } catch (e) { console.warn('Monster loader init failed:', e); }
+    dbg('Done: ' + Object.keys(monsterTemplates).length + '/' + MONSTER_FILES.length);
+  } catch (e) { dbg('INIT FAIL: ' + e.message); }
 }
 
 function cloneMonster(type) {
@@ -89,10 +101,13 @@ export function createEnemyMesh(id, type) {
 
   const monster = cloneMonster(type);
   if (monster) {
+    let mc = 0; monster.model.traverse(c => { if (c.isMesh) mc++; });
+    dbg('spawn ' + type + ': ' + mc + ' meshes, ' + monster.mats.length + ' mats');
     group.add(monster.model);
     modelMats = monster.mats;
     isModel = true;
   } else {
+    dbg('spawn ' + type + ': FALLBACK (no template)');
     // Fallback: colored primitives
     mat = new THREE.MeshStandardMaterial({
       color: visual.color, emissive: visual.emissive, emissiveIntensity: 0.5,
