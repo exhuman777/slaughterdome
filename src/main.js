@@ -53,6 +53,7 @@ loadCharacters().catch(e => console.warn('Character models failed:', e));
 loadDecorations().catch(e => console.warn('Decoration models failed:', e));
 loadMonsterModels().catch(e => console.warn('Monster models failed:', e));
 loadPickupModels().catch(e => console.warn('Pickup models failed:', e));
+loadFlagModel().catch(e => console.warn('Flag model failed:', e));
 
 // Wall rendering
 const knownWalls = new Map();
@@ -71,20 +72,63 @@ ghostWall.position.y = 1.25;
 let flagGroup = null;
 let deliveryMesh = null;
 let flagAnimTime = 0;
+let flagTemplate = null;
+
+// Load flag OBJ model
+async function loadFlagModel() {
+  try {
+    const { OBJLoader } = await import('https://esm.sh/three@0.162.0/addons/loaders/OBJLoader.js');
+    const flagLoader = new OBJLoader();
+    const obj = await new Promise(r => flagLoader.load('models/flag.obj', r, null, () => r(null)));
+    if (!obj) return;
+    // Scale to ~3 units tall
+    obj.updateWorldMatrix(true, true);
+    const box = new THREE.Box3().setFromObject(obj);
+    const sz = new THREE.Vector3();
+    box.getSize(sz);
+    const targetH = 3.5;
+    obj.scale.multiplyScalar(targetH / sz.y);
+    obj.updateWorldMatrix(true, true);
+    box.setFromObject(obj);
+    obj.position.y = -box.min.y;
+    // Apply game materials by mesh name / material name
+    const flagMat = new THREE.MeshStandardMaterial({ color: 0xe6993a, emissive: 0xe6993a, emissiveIntensity: 0.5, roughness: 0.6, side: THREE.DoubleSide });
+    const metalMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, emissive: 0x444444, emissiveIntensity: 0.2, metalness: 0.7, roughness: 0.3 });
+    const woodMat = new THREE.MeshStandardMaterial({ color: 0x8b6914, emissive: 0x1a0f00, emissiveIntensity: 0.1, roughness: 0.8 });
+    obj.traverse(c => {
+      if (!c.isMesh) return;
+      const mname = (c.material && c.material.name) || '';
+      if (mname === 'Flag') c.material = flagMat;
+      else if (mname === 'Metal') c.material = metalMat;
+      else if (mname === 'Wood') c.material = woodMat;
+      else c.material = flagMat;
+      c.castShadow = true;
+    });
+    const g = new THREE.Group();
+    g.add(obj);
+    flagTemplate = g;
+  } catch (e) { console.warn('Flag model failed:', e); }
+}
 
 function createFlagMesh() {
   const group = new THREE.Group();
-  const poleGeo = new THREE.CylinderGeometry(0.06, 0.06, 3, 6);
-  const poleMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.6, roughness: 0.3 });
-  const pole = new THREE.Mesh(poleGeo, poleMat);
-  pole.position.y = 1.5;
-  group.add(pole);
-  const clothGeo = new THREE.PlaneGeometry(1.2, 0.8, 4, 2);
-  const clothMat = new THREE.MeshStandardMaterial({ color: 0xe6993a, emissive: 0xe6993a, emissiveIntensity: 0.6, side: THREE.DoubleSide });
-  const cloth = new THREE.Mesh(clothGeo, clothMat);
-  cloth.position.set(0.65, 2.5, 0);
-  cloth.name = 'flagCloth';
-  group.add(cloth);
+  if (flagTemplate) {
+    const clone = flagTemplate.clone();
+    clone.traverse(c => { if (c.isMesh) c.material = c.material.clone(); });
+    group.add(clone);
+  } else {
+    // Fallback procedural flag
+    const poleGeo = new THREE.CylinderGeometry(0.06, 0.06, 3, 6);
+    const poleMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.6, roughness: 0.3 });
+    const pole = new THREE.Mesh(poleGeo, poleMat);
+    pole.position.y = 1.5;
+    group.add(pole);
+    const clothGeo = new THREE.PlaneGeometry(1.2, 0.8);
+    const clothMat = new THREE.MeshStandardMaterial({ color: 0xe6993a, emissive: 0xe6993a, emissiveIntensity: 0.6, side: THREE.DoubleSide });
+    const cloth = new THREE.Mesh(clothGeo, clothMat);
+    cloth.position.set(0.65, 2.5, 0);
+    group.add(cloth);
+  }
   const light = new THREE.PointLight(0xe6993a, 2, 8);
   light.position.y = 2;
   group.add(light);
@@ -621,18 +665,10 @@ function processState(state, dt) {
     } else {
       flagGroup.position.set(state.flag.x, 0, state.flag.z);
     }
-    // Animate flag cloth waving
-    flagAnimTime += dt * 3;
-    const cloth = flagGroup.getObjectByName('flagCloth');
-    if (cloth) {
-      const geo = cloth.geometry;
-      const pos = geo.attributes.position;
-      for (let i = 0; i < pos.count; i++) {
-        const ox = pos.getX(i);
-        pos.setZ(i, Math.sin(flagAnimTime + ox * 3) * 0.15);
-      }
-      pos.needsUpdate = true;
-    }
+    // Animate flag -- gentle bob and rotation
+    flagAnimTime += dt;
+    flagGroup.rotation.y = Math.sin(flagAnimTime * 2) * 0.3;
+    flagGroup.position.y = Math.sin(flagAnimTime * 3) * 0.15;
     if (!deliveryMesh) { deliveryMesh = createDeliveryMesh(); scene.add(deliveryMesh); }
     deliveryMesh.position.set(state.delivery.x, 0.1, state.delivery.z);
     deliveryMesh.visible = true;
