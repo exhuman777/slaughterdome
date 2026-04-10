@@ -15,18 +15,6 @@ import { showUpgradeShop, hideUpgradeShop } from './upgrades.js';
 import { loadModels, modelsReady, cloneTree } from './models.js';
 import { loadDecorations, buildArenaDecorations, clearDecorations } from './decorations.js';
 
-// Debug: catch and display ALL errors in persistent overlay
-window.onerror = (msg, src, line) => {
-  let el = document.getElementById('dbg-err');
-  if (!el) {
-    el = document.createElement('div');
-    el.id = 'dbg-err';
-    el.style.cssText = 'position:fixed;top:0;left:0;width:100%;background:#220000;color:#ff4444;font-size:14px;padding:12px;z-index:9999;white-space:pre-wrap;font-family:monospace;';
-    document.body.appendChild(el);
-  }
-  el.textContent += 'ERROR: ' + msg + '\nat ' + (src || '').split('/').pop() + ':' + line + '\n\n';
-};
-
 // Screen edge damage pulse
 const flashOverlay = document.getElementById('flash-overlay');
 function pulseDamageOverlay() {
@@ -59,8 +47,7 @@ const bulletMat = new THREE.MeshBasicMaterial({ color: 0xffee44 });
 const spitGeo = new THREE.SphereGeometry(0.25, 6, 6);
 const spitMat = new THREE.MeshBasicMaterial({ color: 0x33ff33 });
 
-// Init systems that depend on above constants
-initProjPool();
+// Async model loaders (fire-and-forget with fallbacks)
 loadModels().catch(e => console.warn('Tree models failed:', e));
 loadCharacters().catch(e => console.warn('Character models failed:', e));
 loadDecorations().catch(e => console.warn('Decoration models failed:', e));
@@ -111,21 +98,19 @@ function triggerSlowMo(scale, speed) {
   slowMoReturn = speed || 2.0;
 }
 
-// Projectile object pool (avoids GC from constant mesh creation)
+// Projectile object pool
 const projPool = { bullet: [], spit: [] };
-function initProjPool() {
-  for (let i = 0; i < 40; i++) {
-    const b = new THREE.Mesh(bulletGeo, bulletMat);
-    b.visible = false; b.position.y = -100;
-    scene.add(b);
-    projPool.bullet.push(b);
-  }
-  for (let i = 0; i < 15; i++) {
-    const s = new THREE.Mesh(spitGeo, spitMat);
-    s.visible = false; s.position.y = -100;
-    scene.add(s);
-    projPool.spit.push(s);
-  }
+for (let i = 0; i < 40; i++) {
+  const b = new THREE.Mesh(bulletGeo, bulletMat);
+  b.visible = false; b.position.y = -100;
+  scene.add(b);
+  projPool.bullet.push(b);
+}
+for (let i = 0; i < 15; i++) {
+  const s = new THREE.Mesh(spitGeo, spitMat);
+  s.visible = false; s.position.y = -100;
+  scene.add(s);
+  projPool.spit.push(s);
 }
 function acquireProj(isBullet) {
   const pool = isBullet ? projPool.bullet : projPool.spit;
@@ -184,16 +169,11 @@ function quitToMenu() {
 }
 
 async function startGame() {
-  // Debug: visible status on title page
-  const dbg = document.getElementById('leaderboard');
-  if (dbg) dbg.textContent = 'Connecting...';
   resumeAudio();
   hideUpgradeShop();
   const name = getPlayerName();
   try {
-    if (dbg) dbg.textContent = 'Connecting to server...';
     await connect(name);
-    if (dbg) dbg.textContent = 'Connected! Loading game...';
     resetInput();
     gameActive = true;
     showHUD();
@@ -224,7 +204,6 @@ async function startGame() {
     buildArenaDecorations(40);
   } catch (err) {
     console.error('Connection failed:', err);
-    if (dbg) dbg.textContent = 'ERROR: ' + err.message;
   }
 }
 
