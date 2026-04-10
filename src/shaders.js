@@ -5,10 +5,10 @@ export const ColorGradeShader = {
   uniforms: {
     tDiffuse: { value: null },
     time: { value: 0 },
-    vignetteIntensity: { value: 0.15 },
-    contrast: { value: 1.15 },
-    warmth: { value: 0.02 },
-    scanlineOpacity: { value: 0.02 },
+    vignetteIntensity: { value: 0.1 },
+    contrast: { value: 1.03 },
+    warmth: { value: 0.01 },
+    scanlineOpacity: { value: 0.015 },
   },
   vertexShader: `
     varying vec2 vUv;

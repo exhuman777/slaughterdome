@@ -62,18 +62,17 @@ export async function loadMonsterModels() {
 function cloneMonster(type) {
   const tmpl = monsterTemplates[type];
   if (!tmpl) return null;
-  // Use SkeletonUtils.clone for proper deep clone (matches working player.js pattern)
   const SU = globalThis._MonsterSkeletonUtils;
   const clone = SU ? SU.clone(tmpl.scene) : tmpl.scene.clone();
+  const visual = tmpl.visual || ENEMY_VISUALS[type] || ENEMY_VISUALS.grunt;
   const mats = [];
   clone.traverse(c => {
     if (c.isMesh) {
-      // Keep original glTF materials (textures, PBR) -- clone for isolation
       c.material = c.material.clone();
       c.material._origColor = c.material.color ? c.material.color.clone() : new THREE.Color(0xffffff);
-      // Boost brightness so monsters pop against dark arena
-      c.material.emissive = c.material.color ? c.material.color.clone() : new THREE.Color(visual.color);
-      c.material.emissiveIntensity = 0.4;
+      // Subtle colored emissive per type -- NOT material.color (which is white for textured models)
+      c.material.emissive = new THREE.Color(visual.color);
+      c.material.emissiveIntensity = 0.15;
       c.frustumCulled = false;
       c.castShadow = true;
       mats.push(c.material);

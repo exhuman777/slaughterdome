@@ -6,11 +6,11 @@ let floorMesh, barrierMesh, shrinkRingMesh, shrinkRingMat;
 let currentRadius = 40;
 
 const BIOMES = {
-  stone:   { floor: 0x555555, wall: 0x888888 },
-  inferno: { floor: 0x663322, wall: 0xbb5544 },
-  frozen:  { floor: 0x4a6677, wall: 0x88aacc },
-  toxic:   { floor: 0x3a5a3a, wall: 0x55aa55 },
-  void:    { floor: 0x2a2a44, wall: 0x665588 },
+  stone:   { floor: 0x444444, wall: 0x777777 },
+  inferno: { floor: 0x553322, wall: 0xaa4433 },
+  frozen:  { floor: 0x3a5566, wall: 0x7799aa },
+  toxic:   { floor: 0x2a4a2a, wall: 0x448844 },
+  void:    { floor: 0x222244, wall: 0x554477 },
 };
 
 let currentBiome = 'stone';
@@ -20,7 +20,7 @@ let biomeTransition = 0;
 export function createArena() {
   const floorGeo = new THREE.CircleGeometry(ARENA_RADIUS, 64);
   floorGeo.rotateX(-Math.PI / 2);
-  const floorMat = new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.8 });
+  const floorMat = new THREE.MeshStandardMaterial({ color: 0x444444, roughness: 0.8 });
   floorMesh = new THREE.Mesh(floorGeo, floorMat);
   floorMesh.receiveShadow = true;
   scene.add(floorMesh);

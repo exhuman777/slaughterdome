@@ -28,12 +28,12 @@ export function initRenderer() {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.3;
+  renderer.toneMappingExposure = 1.8;
   document.body.insertBefore(renderer.domElement, document.getElementById('ui'));
 
-  scene.add(new THREE.AmbientLight(0x9999bb, 1.2));
+  scene.add(new THREE.AmbientLight(0xccccdd, 1.0));
 
-  const sun = new THREE.DirectionalLight(0xffffff, 1.4);
+  const sun = new THREE.DirectionalLight(0xffffff, 1.2);
   sun.position.set(20, 40, 20);
   sun.castShadow = true;
   sun.shadow.mapSize.set(512, 512);
@@ -57,9 +57,9 @@ export function initRenderer() {
 
   const bloomPass = new UnrealBloomPass(
     new THREE.Vector2(Math.floor(window.innerWidth / 2), Math.floor(window.innerHeight / 2)),
-    0.25,  // strength
-    0.7,   // radius
-    0.35   // threshold (lower = more objects bloom)
+    0.15,  // strength (subtle)
+    0.5,   // radius
+    0.6    // threshold (only bright things bloom)
   );
   composer.addPass(bloomPass);
 
