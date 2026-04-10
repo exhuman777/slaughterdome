@@ -2,31 +2,97 @@ import * as THREE from 'https://esm.sh/three@0.162.0';
 import { scene } from './renderer.js';
 
 const ENEMY_VISUALS = {
-  grunt:    { geo: () => new THREE.BoxGeometry(1.2, 1.2, 1.2), color: 0xff4444, emissive: 0x441111 },
-  dasher:   { geo: () => new THREE.ConeGeometry(0.6, 1.5, 8), color: 0xff9944, emissive: 0x442200 },
-  brute:    { geo: () => new THREE.BoxGeometry(1.8, 1.8, 1.8), color: 0xcc3333, emissive: 0x331111 },
-  spitter:  { geo: () => new THREE.SphereGeometry(0.6, 8, 8), color: 0x44ff44, emissive: 0x114411 },
-  swarm:    { geo: () => new THREE.BoxGeometry(0.6, 0.6, 0.6), color: 0xdd44dd, emissive: 0x331133 },
-  shielder: { geo: () => new THREE.BoxGeometry(1.2, 1.2, 1.2), color: 0x4488ff, emissive: 0x112244 },
-  bomber:   { geo: () => new THREE.SphereGeometry(0.7, 8, 8), color: 0xff3333, emissive: 0x441111 },
-  titan:    { geo: () => new THREE.BoxGeometry(2.5, 3.5, 2.5), color: 0xffdd33, emissive: 0x443300 },
+  grunt:    { geo: () => new THREE.BoxGeometry(1.2, 1.2, 1.2), color: 0xff4444, emissive: 0x441111, height: 1.2 },
+  dasher:   { geo: () => new THREE.ConeGeometry(0.6, 1.5, 8), color: 0xff9944, emissive: 0x442200, height: 1.8 },
+  brute:    { geo: () => new THREE.BoxGeometry(1.8, 1.8, 1.8), color: 0xcc3333, emissive: 0x331111, height: 2.4 },
+  spitter:  { geo: () => new THREE.SphereGeometry(0.6, 8, 8), color: 0x44ff44, emissive: 0x114411, height: 1.4 },
+  swarm:    { geo: () => new THREE.BoxGeometry(0.6, 0.6, 0.6), color: 0xdd44dd, emissive: 0x331133, height: 0.7 },
+  shielder: { geo: () => new THREE.BoxGeometry(1.2, 1.2, 1.2), color: 0x4488ff, emissive: 0x112244, height: 1.4 },
+  bomber:   { geo: () => new THREE.SphereGeometry(0.7, 8, 8), color: 0xff3333, emissive: 0x441111, height: 1.4 },
+  titan:    { geo: () => new THREE.BoxGeometry(2.5, 3.5, 2.5), color: 0xffdd33, emissive: 0x443300, height: 3.5 },
 };
+
+const MONSTER_FILES = ['grunt', 'dasher', 'brute', 'spitter', 'swarm', 'shielder', 'bomber', 'titan'];
+const monsterTemplates = {};
+let modelsLoaded = false;
+
+export async function loadMonsterModels() {
+  try {
+    const { GLTFLoader } = await import('https://esm.sh/three@0.162.0/addons/loaders/GLTFLoader.js');
+    const gltfLoader = new GLTFLoader();
+    const results = await Promise.all(
+      MONSTER_FILES.map(name =>
+        new Promise(r => gltfLoader.load('models/monsters/' + name + '.gltf', r, null, () => r(null)))
+      )
+    );
+    for (let i = 0; i < results.length; i++) {
+      const gltf = results[i];
+      if (!gltf) continue;
+      const name = MONSTER_FILES[i];
+      const visual = ENEMY_VISUALS[name] || ENEMY_VISUALS.grunt;
+      const obj = gltf.scene;
+      obj.updateWorldMatrix(true, true);
+      const box = new THREE.Box3().setFromObject(obj);
+      const sz = new THREE.Vector3();
+      box.getSize(sz);
+      if (sz.y > 0.01) {
+        obj.scale.setScalar(visual.height / sz.y);
+        obj.updateWorldMatrix(true, true);
+        box.setFromObject(obj);
+        obj.position.y = -box.min.y;
+      }
+      obj.traverse(c => { if (c.isMesh) c.castShadow = true; });
+      const mats = [];
+      obj.traverse(c => { if (c.isMesh && c.material) mats.push(c.material); });
+      monsterTemplates[name] = { scene: obj, mats };
+    }
+    modelsLoaded = Object.keys(monsterTemplates).length > 0;
+  } catch (e) { console.warn('Monster models failed:', e); }
+}
+
+function cloneMonster(type) {
+  const tmpl = monsterTemplates[type];
+  if (!tmpl) return null;
+  const clone = tmpl.scene.clone();
+  // Clone materials so each instance can flash independently
+  const mats = [];
+  clone.traverse(c => {
+    if (c.isMesh && c.material) {
+      c.material = c.material.clone();
+      c.material._origMap = c.material.map;
+      mats.push(c.material);
+    }
+  });
+  return { model: clone, mats };
+}
 
 const enemyMeshes = new Map();
 
 export function createEnemyMesh(id, type) {
   const visual = ENEMY_VISUALS[type] || ENEMY_VISUALS.grunt;
-  const mat = new THREE.MeshStandardMaterial({
-    color: visual.color, emissive: visual.emissive, emissiveIntensity: 0.5,
-    roughness: 0.4, metalness: 0.3,
-  });
-  const mesh = new THREE.Mesh(visual.geo(), mat);
   const group = new THREE.Group();
-  const yOffset = type === 'brute' ? 0.9 : type === 'titan' ? 1.75 : 0.6;
-  mesh.position.y = yOffset;
-  group.add(mesh);
+  let mat = null;
+  let modelMats = null;
+  let isModel = false;
 
-  if (type === 'shielder') {
+  const monster = cloneMonster(type);
+  if (monster) {
+    group.add(monster.model);
+    modelMats = monster.mats;
+    isModel = true;
+  } else {
+    // Fallback: colored primitives
+    mat = new THREE.MeshStandardMaterial({
+      color: visual.color, emissive: visual.emissive, emissiveIntensity: 0.5,
+      roughness: 0.4, metalness: 0.3,
+    });
+    const mesh = new THREE.Mesh(visual.geo(), mat);
+    const yOffset = type === 'brute' ? 0.9 : type === 'titan' ? 1.75 : 0.6;
+    mesh.position.y = yOffset;
+    group.add(mesh);
+  }
+
+  if (type === 'shielder' && !isModel) {
     const shield = new THREE.Mesh(
       new THREE.TorusGeometry(0.7, 0.12, 8, 16, Math.PI),
       new THREE.MeshStandardMaterial({ color: 0x88ccff, emissive: 0x4488ff, emissiveIntensity: 0.5, transparent: true, opacity: 0.7 })
@@ -36,6 +102,7 @@ export function createEnemyMesh(id, type) {
     group.add(shield);
   }
 
+  const hpBarY = type === 'titan' ? 4 : type === 'brute' ? 2.3 : 1.8;
   const hpBg = new THREE.Mesh(
     new THREE.PlaneGeometry(1.4, 0.15),
     new THREE.MeshBasicMaterial({ color: 0x333333 })
@@ -44,14 +111,13 @@ export function createEnemyMesh(id, type) {
     new THREE.PlaneGeometry(1.4, 0.12),
     new THREE.MeshBasicMaterial({ color: 0xff3333 })
   );
-  const hpBarY = type === 'titan' ? 4 : type === 'brute' ? 2.3 : 1.8;
   hpBg.position.y = hpBarY; hpFill.position.y = hpBarY;
   hpBg.rotation.x = -0.3; hpFill.rotation.x = -0.3;
   group.add(hpBg); group.add(hpFill);
 
   group.scale.set(0.01, 0.01, 0.01);
   scene.add(group);
-  enemyMeshes.set(id, { group, mesh, mat, hpFill, type, flashTimer: 0, spawnTimer: 0.3, scalePunch: 0 });
+  enemyMeshes.set(id, { group, mat, modelMats, hpFill, type, flashTimer: 0, spawnTimer: 0.3, scalePunch: 0, isModel });
   return group;
 }
 
@@ -84,17 +150,35 @@ export function updateEnemyMesh(id, x, z, hp, maxHp, dt) {
 
   if (em.flashTimer > 0) {
     em.flashTimer -= dt;
-    em.mat.emissive.set(0xffffff);
-    em.mat.emissiveIntensity = 2 * (em.flashTimer / 0.15);
+    const fi = Math.max(0, em.flashTimer / 0.15);
+    if (em.isModel && em.modelMats) {
+      em.modelMats.forEach(m => {
+        m.emissive = m.emissive || new THREE.Color();
+        m.emissive.set(0xffffff);
+        m.emissiveIntensity = 2 * fi;
+      });
+    } else if (em.mat) {
+      em.mat.emissive.set(0xffffff);
+      em.mat.emissiveIntensity = 2 * fi;
+    }
   } else {
-    const visual = ENEMY_VISUALS[em.type] || ENEMY_VISUALS.grunt;
-    em.mat.emissive.set(visual.emissive);
-    em.mat.emissiveIntensity = 0.5;
+    if (em.isModel && em.modelMats) {
+      em.modelMats.forEach(m => {
+        if (m.emissiveIntensity > 0) {
+          m.emissive.set(0x000000);
+          m.emissiveIntensity = 0;
+        }
+      });
+    } else if (em.mat) {
+      const visual = ENEMY_VISUALS[em.type] || ENEMY_VISUALS.grunt;
+      em.mat.emissive.set(visual.emissive);
+      em.mat.emissiveIntensity = 0.5;
+    }
   }
 
   if (em.type === 'bomber') {
     const s = 1 + Math.sin(Date.now() / 150) * 0.15;
-    em.mesh.scale.set(s, s, s);
+    em.group.children[0].scale.set(s, s, s);
   }
 }
 
@@ -108,8 +192,7 @@ const dyingEnemies = [];
 export function removeEnemyMesh(id) {
   const em = enemyMeshes.get(id);
   if (em) {
-    // Start death animation instead of instant removal
-    dyingEnemies.push({ group: em.group, mat: em.mat, timer: 0.25 });
+    dyingEnemies.push({ group: em.group, mat: em.mat, modelMats: em.modelMats, isModel: em.isModel, timer: 0.25 });
     enemyMeshes.delete(id);
   }
 }
@@ -120,14 +203,14 @@ export function updateDyingEnemies(dt) {
     d.timer -= dt;
     const t = Math.max(0, d.timer / 0.25);
     d.group.scale.set(t, t, t);
-    d.group.position.y += dt * 3; // Float up slightly
-    d.mat.opacity = t;
-    d.mat.transparent = true;
+    d.group.position.y += dt * 3;
+    if (d.isModel && d.modelMats) {
+      d.modelMats.forEach(m => { m.opacity = t; m.transparent = true; });
+    } else if (d.mat) {
+      d.mat.opacity = t;
+      d.mat.transparent = true;
+    }
     if (d.timer <= 0) {
-      d.group.traverse(child => {
-        if (child.geometry) child.geometry.dispose();
-        if (child.material) child.material.dispose();
-      });
       scene.remove(d.group);
       dyingEnemies.splice(i, 1);
     }

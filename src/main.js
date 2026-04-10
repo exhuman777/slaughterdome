@@ -1,7 +1,7 @@
 import { initRenderer, render, clock, updateCamera, setCamDt } from './renderer.js';
 import { createArena, setBiome, updateBiome, updateArenaRadius } from './arena.js';
 import { createPlayerMesh, updatePlayerMesh, setPlayerRotation, setPlayerDashing, removePlayerMesh, markLocalPlayer, flashPlayer, updateAfterimages, loadCharacters } from './player.js';
-import { createEnemyMesh, updateEnemyMesh, flashEnemy, removeEnemyMesh, removeAllEnemies, updateDyingEnemies } from './enemy.js';
+import { createEnemyMesh, updateEnemyMesh, flashEnemy, removeEnemyMesh, removeAllEnemies, updateDyingEnemies, loadMonsterModels } from './enemy.js';
 import { updatePickups as updatePickupMeshes, syncPickups } from './pickups.js';
 import { updateParticles, spawnKillParticles, spawnSparks, spawnBloodDrops, spawnDustPuff, spawnSpeedTrail, spawnFloatingText, spawnGoreChunks } from './particles.js';
 import * as THREE from 'https://esm.sh/three@0.162.0';
@@ -51,6 +51,7 @@ const spitMat = new THREE.MeshBasicMaterial({ color: 0x33ff33 });
 loadModels().catch(e => console.warn('Tree models failed:', e));
 loadCharacters().catch(e => console.warn('Character models failed:', e));
 loadDecorations().catch(e => console.warn('Decoration models failed:', e));
+loadMonsterModels().catch(e => console.warn('Monster models failed:', e));
 
 // Wall rendering
 const knownWalls = new Map();
