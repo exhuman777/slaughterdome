@@ -16,6 +16,14 @@ const COMBO_NAMES = { 5: 'RAMPAGE', 10: 'KILLING SPREE', 15: 'DOMINATING', 20: '
 export function showTitle() {
   title.style.display = 'block'; hud.style.display = 'none'; gameover.style.display = 'none';
   hideAbilities(); hideInfo(); hidePlayers();
+  if (countdownEl) countdownEl.style.display = 'none';
+  if (arenaWarnEl) arenaWarnEl.style.display = 'none';
+  if (gameTipEl) gameTipEl.style.display = 'none';
+  if (wallModeEl) wallModeEl.style.display = 'none';
+  if (wallHintEl) wallHintEl.style.display = 'none';
+  if (pingEl) pingEl.style.display = 'none';
+  if (weaponEl) weaponEl.style.display = 'none';
+  if (upgradeStrip) upgradeStrip.style.display = 'none';
   fetchLeaderboard();
 }
 
@@ -52,6 +60,11 @@ export function showHUD() {
 export function showGameOver(wave, score, players) {
   gameover.style.display = 'block'; hud.style.display = 'none';
   hideYouDied();
+  if (countdownEl) countdownEl.style.display = 'none';
+  if (arenaWarnEl) arenaWarnEl.style.display = 'none';
+  if (gameTipEl) gameTipEl.style.display = 'none';
+  if (wallModeEl) wallModeEl.style.display = 'none';
+  if (wallHintEl) wallHintEl.style.display = 'none';
   goWaveVal.textContent = wave;
   goScoreVal.textContent = score;
   if (Array.isArray(players)) {

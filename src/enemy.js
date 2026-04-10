@@ -20,34 +20,33 @@ export async function loadMonsterModels() {
   try {
     const { GLTFLoader } = await import('https://esm.sh/three@0.162.0/addons/loaders/GLTFLoader.js');
     const gltfLoader = new GLTFLoader();
-    const results = await Promise.all(
-      MONSTER_FILES.map(name =>
-        new Promise(r => gltfLoader.load('models/monsters/' + name + '.gltf', r, null, () => r(null)))
-      )
-    );
-    for (let i = 0; i < results.length; i++) {
-      const gltf = results[i];
-      if (!gltf) continue;
-      const name = MONSTER_FILES[i];
-      const visual = ENEMY_VISUALS[name] || ENEMY_VISUALS.grunt;
-      const obj = gltf.scene;
-      obj.updateWorldMatrix(true, true);
-      const box = new THREE.Box3().setFromObject(obj);
-      const sz = new THREE.Vector3();
-      box.getSize(sz);
-      if (sz.y > 0.01) {
-        obj.scale.setScalar(visual.height / sz.y);
+    for (const name of MONSTER_FILES) {
+      try {
+        const gltf = await new Promise((resolve, reject) => {
+          gltfLoader.load('models/monsters/' + name + '.gltf', resolve, null, reject);
+        });
+        if (!gltf || !gltf.scene) { console.warn('Monster ' + name + ': no scene'); continue; }
+        const visual = ENEMY_VISUALS[name] || ENEMY_VISUALS.grunt;
+        const obj = gltf.scene;
         obj.updateWorldMatrix(true, true);
-        box.setFromObject(obj);
-        obj.position.y = -box.min.y;
-      }
-      obj.traverse(c => { if (c.isMesh) c.castShadow = true; });
-      const mats = [];
-      obj.traverse(c => { if (c.isMesh && c.material) mats.push(c.material); });
-      monsterTemplates[name] = { scene: obj, mats };
+        const box = new THREE.Box3().setFromObject(obj);
+        const sz = new THREE.Vector3();
+        box.getSize(sz);
+        if (sz.y > 0.01) {
+          obj.scale.setScalar(visual.height / sz.y);
+          obj.updateWorldMatrix(true, true);
+          box.setFromObject(obj);
+          obj.position.y = -box.min.y;
+        }
+        obj.traverse(c => { if (c.isMesh) c.castShadow = true; });
+        const mats = [];
+        obj.traverse(c => { if (c.isMesh && c.material) mats.push(c.material); });
+        monsterTemplates[name] = { scene: obj, mats };
+      } catch (e) { console.warn('Monster ' + name + ' failed:', e); }
     }
     modelsLoaded = Object.keys(monsterTemplates).length > 0;
-  } catch (e) { console.warn('Monster models failed:', e); }
+    console.log('Monster models loaded:', Object.keys(monsterTemplates).length + '/' + MONSTER_FILES.length);
+  } catch (e) { console.warn('Monster loader init failed:', e); }
 }
 
 function cloneMonster(type) {
