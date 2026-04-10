@@ -65,14 +65,14 @@ function cloneMonster(type) {
   // Use SkeletonUtils.clone for proper deep clone (matches working player.js pattern)
   const SU = globalThis._MonsterSkeletonUtils;
   const clone = SU ? SU.clone(tmpl.scene) : tmpl.scene.clone();
-  const visual = tmpl.visual || ENEMY_VISUALS[type] || ENEMY_VISUALS.grunt;
   const mats = [];
   clone.traverse(c => {
     if (c.isMesh) {
-      // Fresh MeshBasicMaterial per clone -- no lighting dependency, always visible
-      c.material = new THREE.MeshBasicMaterial({ color: visual.color });
-      c.material._origColor = new THREE.Color(visual.color);
+      // Keep original glTF materials (textures, PBR) -- just clone for isolation
+      c.material = c.material.clone();
+      c.material._origColor = c.material.color ? c.material.color.clone() : new THREE.Color(0xffffff);
       c.frustumCulled = false;
+      c.castShadow = true;
       mats.push(c.material);
     }
   });
