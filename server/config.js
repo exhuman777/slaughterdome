@@ -134,6 +134,8 @@ export const UPGRADE_TIER_WEIGHTS = {
 export const FLAG = {
   pickupRadius: 1.5,
   deliveryRadius: 2.5,
+  magnetRange: 6,
+  magnetSpeed: 10,
   minSeparation: 15,
   obstacleClearance: 4,
   aliveBonus: 10,

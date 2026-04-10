@@ -728,14 +728,23 @@ function updateFlag(room) {
     }
     return;
   }
-  // Check pickup proximity for all alive players
+  // Magnet pull + pickup check for all alive players
+  const dt = TICK_MS / 1000;
+  const magnetSq = FLAG.magnetRange * FLAG.magnetRange;
+  const pickupSq = FLAG.pickupRadius * FLAG.pickupRadius;
   for (const [, p] of room.players) {
     if (!p.alive) continue;
     const dx = p.x - flag.x, dz = p.z - flag.z;
-    if (dx * dx + dz * dz < FLAG.pickupRadius * FLAG.pickupRadius) {
+    const distSq = dx * dx + dz * dz;
+    if (distSq < pickupSq) {
       flag.carriedBy = p.id;
       room.broadcast({ t: 'flag_picked', pid: p.id });
       return;
+    }
+    if (distSq < magnetSq && distSq > pickupSq) {
+      const dist = Math.sqrt(distSq);
+      flag.x += (dx / dist) * FLAG.magnetSpeed * dt;
+      flag.z += (dz / dist) * FLAG.magnetSpeed * dt;
     }
   }
 }
