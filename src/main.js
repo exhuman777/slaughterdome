@@ -56,7 +56,8 @@ loadMonsterModels().catch(e => console.warn('Monster models failed:', e));
 // Wall rendering
 const knownWalls = new Map();
 const wallGeo = new THREE.BoxGeometry(4, 2.5, 0.5);
-const wallMat = new THREE.MeshStandardMaterial({ color: 0x888899, roughness: 0.5, metalness: 0.3 });
+const WALL_COLORS = [0x4488ff, 0x44aaff, 0x6644cc, 0x3399ff, 0x5577ee, 0x2266dd, 0x7744bb, 0x3388cc];
+let wallColorIdx = 0;
 
 // Wall placement preview ghost
 const ghostWallMat = new THREE.MeshBasicMaterial({ color: 0x4488ff, transparent: true, opacity: 0.6, side: THREE.DoubleSide });
@@ -529,20 +530,25 @@ function processState(state, dt) {
     if (!serverWallIds.has(id)) {
       scene.remove(data.mesh);
       data.mat.dispose();
-      spawnSparks(data.mesh.position.x, data.mesh.position.z, 0x888888, 10);
+      spawnSparks(data.mesh.position.x, data.mesh.position.z, data.baseColor || 0x4488ff, 10);
       playWallDestroy();
       knownWalls.delete(id);
     }
   }
   for (const w of (state.walls || [])) {
     if (!knownWalls.has(w.id)) {
-      const mat = wallMat.clone();
+      const wColor = WALL_COLORS[wallColorIdx % WALL_COLORS.length];
+      wallColorIdx++;
+      const mat = new THREE.MeshStandardMaterial({
+        color: wColor, emissive: wColor, emissiveIntensity: 0.3,
+        roughness: 0.4, metalness: 0.2, transparent: true, opacity: 1,
+      });
       const mesh = new THREE.Mesh(wallGeo, mat);
       mesh.position.set(w.pos[0], 1.25, w.pos[2]);
       mesh.rotation.y = w.angle || 0;
       mesh.castShadow = true;
       scene.add(mesh);
-      knownWalls.set(w.id, { mesh, mat, maxHp: w.maxHp || 120 });
+      knownWalls.set(w.id, { mesh, mat, maxHp: w.maxHp || 120, baseColor: wColor });
       playWallPlace();
       spawnSparks(w.pos[0], w.pos[2], 0x4488ff, 4);
       spawnDustPuff(w.pos[0], w.pos[2]);
@@ -550,13 +556,13 @@ function processState(state, dt) {
     const wData = knownWalls.get(w.id);
     if (wData) {
       const hpRatio = Math.max(0, w.hp / wData.maxHp);
-      wData.mat.opacity = 0.4 + hpRatio * 0.6;
-      wData.mat.transparent = true;
-      // Shift color from grey to red as wall takes damage
-      const r = 0.53 + (1 - hpRatio) * 0.47;
-      const g = 0.53 * hpRatio;
-      const b = 0.6 * hpRatio;
-      wData.mat.color.setRGB(r, g, b);
+      wData.mat.opacity = 0.5 + hpRatio * 0.5;
+      // Blend from base color toward red as wall takes damage
+      const base = new THREE.Color(wData.baseColor || 0x4488ff);
+      const dmg = new THREE.Color(0xff2222);
+      wData.mat.color.copy(base).lerp(dmg, 1 - hpRatio);
+      wData.mat.emissive.copy(base).lerp(dmg, 1 - hpRatio);
+      wData.mat.emissiveIntensity = 0.3 + (1 - hpRatio) * 0.4;
     }
   }
 

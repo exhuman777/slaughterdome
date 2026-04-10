@@ -63,8 +63,8 @@
     padding: 0 40px 40px; max-width: 800px;
   }
   .hero-year {
-    font-family: 'JetBrains Mono', monospace; font-size: 14px;
-    color: #aa3333; letter-spacing: 8px; margin-bottom: 4px;
+    font-family: 'JetBrains Mono', monospace; font-size: 20px;
+    color: #cc4444; letter-spacing: 8px; margin-bottom: 8px;
     animation: flicker 3s ease-in-out infinite;
   }
   .hero h1 {
@@ -79,14 +79,14 @@
     50% { text-shadow: 0 0 60px rgba(255,50,50,0.8), 0 0 120px rgba(204,34,34,0.4), 0 2px 0 #1a0000; }
   }
   .hero-tagline {
-    font-size: 12px; color: #cc4444; letter-spacing: 6px;
-    text-transform: uppercase; margin-bottom: 20px;
-    border-left: 2px solid #cc2222; padding-left: 12px;
+    font-size: 18px; color: #cc4444; letter-spacing: 6px;
+    text-transform: uppercase; margin-bottom: 24px;
+    border-left: 3px solid #cc2222; padding-left: 14px;
   }
   .hero-lore {
-    font-size: 13px; color: #8a7a6a; line-height: 1.8; max-width: 560px;
+    font-size: 18px; color: #b09a8a; line-height: 1.8; max-width: 600px;
   }
-  .hero-lore strong { color: #cc3333; font-weight: 700; }
+  .hero-lore strong { color: #ee4444; font-weight: 700; }
 
   @keyframes flicker {
     0%, 95%, 100% { opacity: 1; }
@@ -102,7 +102,7 @@
     z-index: 3; text-align: center;
   }
   .scroll-hint span {
-    display: block; font-size: 9px; color: #553333; letter-spacing: 4px;
+    display: block; font-size: 14px; color: #774444; letter-spacing: 4px;
     text-transform: uppercase; margin-bottom: 6px;
   }
   .scroll-arrow {
@@ -117,7 +117,7 @@
 
   /* Content sections */
   .landing-body {
-    padding: 0 40px 60px; max-width: 800px; margin: 0 auto;
+    padding: 0 60px 60px; max-width: 1000px; margin: 0 auto;
   }
 
   .section-divider {
@@ -126,8 +126,8 @@
   }
 
   .section-label {
-    font-size: 10px; color: #cc3333; letter-spacing: 6px;
-    text-transform: uppercase; margin-bottom: 14px;
+    font-size: 18px; color: #ee4444; letter-spacing: 6px;
+    text-transform: uppercase; margin-bottom: 20px;
     display: flex; align-items: center; gap: 12px;
   }
   .section-label::after {
@@ -141,18 +141,18 @@
     margin-bottom: 8px; background: #1a0808;
   }
   .feature-box {
-    background: #0e0a0a; padding: 16px 8px; text-align: center;
+    background: #0e0a0a; padding: 24px 12px; text-align: center;
     border-top: 1px solid #331111;
     transition: background 0.2s;
   }
   .feature-box:hover { background: #140e0e; }
   .feature-box .f-val {
-    font-family: 'Orbitron', monospace; font-size: 24px; font-weight: 700;
-    color: #cc3333; text-shadow: 0 0 15px rgba(204,34,34,0.4);
+    font-family: 'Orbitron', monospace; font-size: 48px; font-weight: 700;
+    color: #ee4444; text-shadow: 0 0 20px rgba(204,34,34,0.5);
   }
   .feature-box .f-label {
-    font-size: 9px; color: #5a4a3a; letter-spacing: 3px;
-    text-transform: uppercase; margin-top: 6px;
+    font-size: 16px; color: #8a7a6a; letter-spacing: 3px;
+    text-transform: uppercase; margin-top: 8px;
   }
 
   /* Lore block */
@@ -162,31 +162,31 @@
     margin-bottom: 8px;
   }
   .lore-block p {
-    color: #7a6a5a; font-size: 12px; line-height: 1.8; margin-bottom: 8px;
+    color: #b09a8a; font-size: 18px; line-height: 1.8; margin-bottom: 8px;
   }
   .lore-block p:last-child { margin-bottom: 0; }
-  .lore-block .red { color: #cc3333; font-weight: 700; }
+  .lore-block .red { color: #ee4444; font-weight: 700; }
   .lore-sm { border-left-color: #5a3a2a; background: linear-gradient(to right, rgba(90,58,42,0.06), transparent); }
-  .lore-sm p { color: #6a5a4a; }
+  .lore-sm p { color: #9a8a7a; }
 
   /* Controls */
   .controls-section { margin-bottom: 8px; }
   .ctrl-group { margin-bottom: 14px; }
   .ctrl-group-title {
-    font-size: 9px; color: #cc3333; letter-spacing: 4px;
-    margin-bottom: 8px; font-weight: 700;
+    font-size: 16px; color: #ee4444; letter-spacing: 4px;
+    margin-bottom: 12px; font-weight: 700;
   }
   .ctrl-row-lg {
-    display: flex; align-items: center; gap: 14px;
-    padding: 7px 0; border-bottom: 1px solid #1a1210;
+    display: flex; align-items: center; gap: 18px;
+    padding: 10px 0; border-bottom: 1px solid #1a1210;
   }
   .ctrl-key-lg {
-    background: #0e0a0a; border: 1px solid #331111; color: #cc4444;
-    padding: 4px 10px; font-size: 12px; font-weight: 700;
-    min-width: 60px; text-align: center; flex-shrink: 0;
-    text-shadow: 0 0 8px rgba(204,34,34,0.3);
+    background: #0e0a0a; border: 1px solid #441111; color: #ee5555;
+    padding: 6px 14px; font-size: 16px; font-weight: 700;
+    min-width: 80px; text-align: center; flex-shrink: 0;
+    text-shadow: 0 0 10px rgba(204,34,34,0.4);
   }
-  .ctrl-desc-lg { font-size: 12px; color: #6a5a4a; line-height: 1.4; }
+  .ctrl-desc-lg { font-size: 16px; color: #b09a8a; line-height: 1.5; }
 
   /* Weapons */
   .weapons-row {
@@ -199,26 +199,26 @@
   }
   .wep-box:hover { background: #140e0e; }
   .wep-name {
-    font-size: 11px; font-weight: 700; color: #cc4444;
-    letter-spacing: 2px; margin-bottom: 6px;
+    font-size: 18px; font-weight: 700; color: #ee5555;
+    letter-spacing: 2px; margin-bottom: 8px;
   }
-  .wep-stat { font-size: 10px; color: #5a4a3a; line-height: 1.6; }
+  .wep-stat { font-size: 15px; color: #9a8a7a; line-height: 1.7; }
 
   /* Leaderboard */
-  .leaderboard { margin-bottom: 8px; font-size: 12px; }
+  .leaderboard { margin-bottom: 8px; font-size: 18px; }
   .lb-row {
     display: flex; justify-content: space-between;
-    padding: 5px 10px; border-bottom: 1px solid #1a1210;
+    padding: 8px 12px; border-bottom: 1px solid #1a1210;
     transition: background 0.15s;
   }
   .lb-row:hover { background: rgba(204,34,34,0.04); }
   .lb-row:nth-child(even) { background: rgba(204,34,34,0.02); }
-  .lb-rank { color: #cc3333; font-weight: 700; width: 30px; }
-  .lb-name { color: #8a7a6a; flex: 1; }
-  .lb-score { color: #c4a882; font-weight: 700; width: 60px; text-align: right; }
-  .lb-wave { color: #5a4a3a; width: 50px; text-align: right; }
-  .lb-kills { color: #cc3333; width: 50px; text-align: right; }
-  .lb-empty { color: #332222; text-align: center; padding: 16px; }
+  .lb-rank { color: #ee4444; font-weight: 700; width: 40px; }
+  .lb-name { color: #c4a882; flex: 1; }
+  .lb-score { color: #e6993a; font-weight: 700; width: 70px; text-align: right; }
+  .lb-wave { color: #8a7a6a; width: 60px; text-align: right; }
+  .lb-kills { color: #ee4444; width: 60px; text-align: right; }
+  .lb-empty { color: #553333; text-align: center; padding: 16px; font-size: 16px; }
 
   /* Play section */
   .play-section {
@@ -231,9 +231,9 @@
     background: linear-gradient(to right, transparent, #cc2222, transparent);
   }
   #title input {
-    background: rgba(204,34,34,0.04); border: 1px solid #331111; color: #cc4444;
-    padding: 10px 20px; font-size: 15px; font-family: inherit;
-    text-align: center; margin-bottom: 18px; outline: none; width: 260px;
+    background: rgba(204,34,34,0.04); border: 1px solid #441111; color: #ee5555;
+    padding: 14px 24px; font-size: 20px; font-family: inherit;
+    text-align: center; margin-bottom: 22px; outline: none; width: 320px;
     letter-spacing: 3px; transition: border-color 0.2s, box-shadow 0.2s;
   }
   #title input::placeholder { color: #3a2a2a; }
@@ -242,9 +242,9 @@
     box-shadow: 0 0 20px rgba(204,34,34,0.15), inset 0 0 20px rgba(204,34,34,0.05);
   }
   #play-btn {
-    background: transparent; color: #cc2222; border: 2px solid #cc2222;
-    padding: 14px 52px; font-size: 18px; font-family: 'Black Ops One', monospace;
-    cursor: pointer; letter-spacing: 6px; font-weight: 400;
+    background: transparent; color: #ee3333; border: 2px solid #ee3333;
+    padding: 18px 64px; font-size: 24px; font-family: 'Black Ops One', monospace;
+    cursor: pointer; letter-spacing: 8px; font-weight: 400;
     text-shadow: 0 0 20px rgba(204,34,34,0.5);
     box-shadow: 0 0 30px rgba(204,34,34,0.1), inset 0 0 30px rgba(204,34,34,0.05);
     transition: all 0.2s;
@@ -261,7 +261,7 @@
   }
 
   .footer-note {
-    text-align: center; color: #221818; font-size: 9px;
+    text-align: center; color: #443333; font-size: 14px;
     margin-top: 24px; letter-spacing: 2px;
   }
 

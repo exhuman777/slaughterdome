@@ -38,10 +38,20 @@ export async function loadMonsterModels() {
           box.setFromObject(obj);
           obj.position.y = -box.min.y;
         }
-        obj.traverse(c => { if (c.isMesh) c.castShadow = true; });
+        obj.traverse(c => {
+          if (!c.isMesh) return;
+          c.castShadow = true;
+          const m = c.material;
+          if (m) {
+            // Boost brightness so models are visible on dark arena
+            m.emissive = new THREE.Color(visual.color);
+            m.emissiveIntensity = 0.6;
+            m.roughness = Math.min(m.roughness || 0.5, 0.7);
+          }
+        });
         const mats = [];
         obj.traverse(c => { if (c.isMesh && c.material) mats.push(c.material); });
-        monsterTemplates[name] = { scene: obj, mats };
+        monsterTemplates[name] = { scene: obj, mats, visual };
       } catch (e) { console.warn('Monster ' + name + ' failed:', e); }
     }
     modelsLoaded = Object.keys(monsterTemplates).length > 0;
@@ -53,12 +63,14 @@ function cloneMonster(type) {
   const tmpl = monsterTemplates[type];
   if (!tmpl) return null;
   const clone = tmpl.scene.clone();
-  // Clone materials so each instance can flash independently
+  const visual = tmpl.visual || ENEMY_VISUALS[type] || ENEMY_VISUALS.grunt;
   const mats = [];
   clone.traverse(c => {
     if (c.isMesh && c.material) {
       c.material = c.material.clone();
-      c.material._origMap = c.material.map;
+      // Store original emissive for recovery after hit flash
+      c.material._origEmissive = new THREE.Color(visual.color);
+      c.material._origEmissiveIntensity = 0.6;
       mats.push(c.material);
     }
   });
@@ -163,9 +175,9 @@ export function updateEnemyMesh(id, x, z, hp, maxHp, dt) {
   } else {
     if (em.isModel && em.modelMats) {
       em.modelMats.forEach(m => {
-        if (m.emissiveIntensity > 0) {
-          m.emissive.set(0x000000);
-          m.emissiveIntensity = 0;
+        if (m.emissiveIntensity !== (m._origEmissiveIntensity || 0.6)) {
+          m.emissive.copy(m._origEmissive || new THREE.Color(0x000000));
+          m.emissiveIntensity = m._origEmissiveIntensity || 0.6;
         }
       });
     } else if (em.mat) {
