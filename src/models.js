@@ -5,11 +5,11 @@ const templates = [];
 let ready = false;
 
 const mats = {
-  canopy: new THREE.MeshStandardMaterial({ color: 0x55cc33, emissive: 0x22aa11, emissiveIntensity: 0.3, roughness: 0.6 }),
-  trunk: new THREE.MeshStandardMaterial({ color: 0x8B6914, emissive: 0x443300, emissiveIntensity: 0.15, roughness: 0.7 }),
-  dead: new THREE.MeshStandardMaterial({ color: 0x887755, emissive: 0x332211, emissiveIntensity: 0.2, roughness: 0.7 }),
-  pine: new THREE.MeshStandardMaterial({ color: 0x33aa55, emissive: 0x118833, emissiveIntensity: 0.3, roughness: 0.6 }),
-  pineTrunk: new THREE.MeshStandardMaterial({ color: 0x7a5a28, emissive: 0x332200, emissiveIntensity: 0.15, roughness: 0.7 }),
+  canopy: new THREE.MeshStandardMaterial({ color: 0x3a8a2a, emissive: 0x1a3a10, emissiveIntensity: 0.15, roughness: 0.7 }),
+  trunk: new THREE.MeshStandardMaterial({ color: 0x6a4a1a, emissive: 0x221100, emissiveIntensity: 0.1, roughness: 0.8 }),
+  dead: new THREE.MeshStandardMaterial({ color: 0x6a5a44, emissive: 0x1a1108, emissiveIntensity: 0.1, roughness: 0.8 }),
+  pine: new THREE.MeshStandardMaterial({ color: 0x2a7a3a, emissive: 0x0a2a10, emissiveIntensity: 0.15, roughness: 0.7 }),
+  pineTrunk: new THREE.MeshStandardMaterial({ color: 0x5a4020, emissive: 0x1a1100, emissiveIntensity: 0.1, roughness: 0.8 }),
 };
 
 function load(url) {

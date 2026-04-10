@@ -15,8 +15,8 @@ const CAMERA_ANGLE = 55 * (Math.PI / 180);
 
 export function initRenderer() {
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x1a1a2e);
-  scene.fog = new THREE.Fog(0x1a1a2e, 70, 110);
+  scene.background = new THREE.Color(0x22222e);
+  scene.fog = new THREE.Fog(0x22222e, 70, 110);
 
   camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 200);
   camera.position.set(0, CAMERA_HEIGHT, CAMERA_HEIGHT * Math.cos(CAMERA_ANGLE));
@@ -31,9 +31,9 @@ export function initRenderer() {
   renderer.toneMappingExposure = 1.3;
   document.body.insertBefore(renderer.domElement, document.getElementById('ui'));
 
-  scene.add(new THREE.AmbientLight(0xaaaacc, 1.5));
+  scene.add(new THREE.AmbientLight(0x9999bb, 1.2));
 
-  const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+  const sun = new THREE.DirectionalLight(0xffffff, 1.4);
   sun.position.set(20, 40, 20);
   sun.castShadow = true;
   sun.shadow.mapSize.set(512, 512);
