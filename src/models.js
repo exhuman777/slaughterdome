@@ -78,5 +78,19 @@ export function modelsReady() { return ready; }
 
 export function cloneTree(idx) {
   if (!ready) return null;
-  return templates[idx % templates.length].clone();
+  const clone = templates[idx % templates.length].clone();
+  // Randomize canopy and trunk shading per tree
+  clone.traverse(c => {
+    if (!c.isMesh) return;
+    c.material = c.material.clone();
+    const col = c.material.color;
+    // Shift hue/brightness randomly
+    const hsl = {};
+    col.getHSL(hsl);
+    hsl.h += (Math.random() - 0.5) * 0.06;  // slight hue shift
+    hsl.s *= 0.7 + Math.random() * 0.6;      // saturation variation
+    hsl.l *= 0.75 + Math.random() * 0.5;     // brightness variation
+    col.setHSL(hsl.h, Math.min(1, hsl.s), Math.min(1, hsl.l));
+  });
+  return clone;
 }

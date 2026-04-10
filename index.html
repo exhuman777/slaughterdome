@@ -9,110 +9,274 @@
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Bangers&family=Permanent+Marker&family=Bungee&family=Press+Start+2P&family=Creepster&family=Russo+One&family=Black+Ops+One&family=Righteous&family=Orbitron:wght@700&family=Alfa+Slab+One&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: #0d0b0a; overflow: hidden; font-family: 'JetBrains Mono', 'Courier New', monospace; }
+  body { background: #0a0808; overflow: hidden; font-family: 'JetBrains Mono', 'Courier New', monospace; }
   canvas { display: block; position: relative; z-index: 0; }
   #ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
   #ui > * { pointer-events: auto; }
 
-  /* Title / Landing */
+  /* ====== LANDING PAGE ====== */
   #title {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(13,11,10,0.95);
-    color: #c4a882; overflow-y: auto;
+    background: #0a0808; color: #c4a882; overflow-y: auto;
+    scrollbar-width: thin; scrollbar-color: #331111 #0a0808;
   }
-  #title-inner { max-width: 600px; width: 90%; margin: 0 auto; padding: 40px 20px; }
-  #title h1 {
-    font-size: 56px; font-weight: 800; color: #ff4444;
-    text-shadow: 0 0 30px rgba(255,68,68,0.4);
-    letter-spacing: 10px; text-align: center; margin-bottom: 4px;
+  #title::-webkit-scrollbar { width: 4px; }
+  #title::-webkit-scrollbar-track { background: #0a0808; }
+  #title::-webkit-scrollbar-thumb { background: #331111; }
+
+  /* Hero section */
+  .hero {
+    position: relative; width: 100%; min-height: 100vh;
+    background: url('images/hero.jpg') center center / cover no-repeat;
+    display: flex; flex-direction: column; justify-content: flex-end;
   }
-  #title .tagline {
-    text-align: center; color: #e6993a; font-size: 13px;
-    letter-spacing: 6px; text-transform: uppercase; margin-bottom: 24px;
+  .hero::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(to bottom,
+      rgba(10,8,8,0.2) 0%,
+      rgba(10,8,8,0.1) 30%,
+      rgba(10,8,8,0.4) 60%,
+      rgba(10,8,8,0.95) 85%,
+      #0a0808 100%
+    );
+    z-index: 1;
   }
-  #title .desc {
-    text-align: center; color: #888; font-size: 12px; line-height: 1.6;
-    margin-bottom: 28px; padding: 0 20px;
+  /* Scanline overlay */
+  .hero::after {
+    content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    animation: scanDrift 8s linear infinite;
+  }
+  @keyframes scanDrift {
+    0% { background-position: 0 0; }
+    100% { background-position: 0 100px; }
   }
 
-  .feature-grid {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
-    margin-bottom: 28px;
+  .hero-content {
+    position: relative; z-index: 3;
+    padding: 0 40px 40px; max-width: 800px;
   }
-  .feature-box {
-    border: 1px solid #333; background: rgba(230,153,58,0.04);
-    padding: 14px 16px; text-align: center;
+  .hero-year {
+    font-family: 'JetBrains Mono', monospace; font-size: 14px;
+    color: #aa3333; letter-spacing: 8px; margin-bottom: 4px;
+    animation: flicker 3s ease-in-out infinite;
   }
-  .feature-box .f-val { font-size: 22px; font-weight: 800; color: #e6993a; }
-  .feature-box .f-label { font-size: 10px; color: #777; letter-spacing: 2px; text-transform: uppercase; margin-top: 4px; }
+  .hero h1 {
+    font-family: 'Black Ops One', 'Alfa Slab One', cursive;
+    font-size: clamp(48px, 8vw, 80px); color: #fff;
+    text-shadow: 0 0 40px rgba(204,34,34,0.6), 0 0 80px rgba(204,34,34,0.3), 0 2px 0 #1a0000;
+    letter-spacing: 6px; line-height: 1; margin-bottom: 12px;
+    animation: titleGlow 4s ease-in-out infinite;
+  }
+  @keyframes titleGlow {
+    0%, 100% { text-shadow: 0 0 40px rgba(204,34,34,0.6), 0 0 80px rgba(204,34,34,0.3), 0 2px 0 #1a0000; }
+    50% { text-shadow: 0 0 60px rgba(255,50,50,0.8), 0 0 120px rgba(204,34,34,0.4), 0 2px 0 #1a0000; }
+  }
+  .hero-tagline {
+    font-size: 12px; color: #cc4444; letter-spacing: 6px;
+    text-transform: uppercase; margin-bottom: 20px;
+    border-left: 2px solid #cc2222; padding-left: 12px;
+  }
+  .hero-lore {
+    font-size: 13px; color: #8a7a6a; line-height: 1.8; max-width: 560px;
+  }
+  .hero-lore strong { color: #cc3333; font-weight: 700; }
+
+  @keyframes flicker {
+    0%, 95%, 100% { opacity: 1; }
+    96% { opacity: 0.4; }
+    97% { opacity: 1; }
+    98% { opacity: 0.2; }
+    99% { opacity: 0.9; }
+  }
+
+  /* Scroll indicator */
+  .scroll-hint {
+    position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+    z-index: 3; text-align: center;
+  }
+  .scroll-hint span {
+    display: block; font-size: 9px; color: #553333; letter-spacing: 4px;
+    text-transform: uppercase; margin-bottom: 6px;
+  }
+  .scroll-arrow {
+    width: 20px; height: 20px; border-right: 2px solid #cc2222; border-bottom: 2px solid #cc2222;
+    transform: rotate(45deg); margin: 0 auto;
+    animation: scrollBounce 1.5s ease-in-out infinite;
+  }
+  @keyframes scrollBounce {
+    0%, 100% { transform: rotate(45deg) translateY(0); opacity: 0.5; }
+    50% { transform: rotate(45deg) translateY(6px); opacity: 1; }
+  }
+
+  /* Content sections */
+  .landing-body {
+    padding: 0 40px 60px; max-width: 800px; margin: 0 auto;
+  }
+
+  .section-divider {
+    height: 1px; margin: 32px 0;
+    background: linear-gradient(to right, #cc222200, #cc222266, #cc222200);
+  }
 
   .section-label {
-    font-size: 11px; color: #e6993a; letter-spacing: 4px;
-    text-transform: uppercase; margin-bottom: 10px;
-    border-bottom: 1px solid #222; padding-bottom: 6px;
+    font-size: 10px; color: #cc3333; letter-spacing: 6px;
+    text-transform: uppercase; margin-bottom: 14px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .section-label::after {
+    content: ''; flex: 1; height: 1px;
+    background: linear-gradient(to right, #331111, transparent);
   }
 
+  /* Stats grid */
+  .feature-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px;
+    margin-bottom: 8px; background: #1a0808;
+  }
+  .feature-box {
+    background: #0e0a0a; padding: 16px 8px; text-align: center;
+    border-top: 1px solid #331111;
+    transition: background 0.2s;
+  }
+  .feature-box:hover { background: #140e0e; }
+  .feature-box .f-val {
+    font-family: 'Orbitron', monospace; font-size: 24px; font-weight: 700;
+    color: #cc3333; text-shadow: 0 0 15px rgba(204,34,34,0.4);
+  }
+  .feature-box .f-label {
+    font-size: 9px; color: #5a4a3a; letter-spacing: 3px;
+    text-transform: uppercase; margin-top: 6px;
+  }
+
+  /* Lore block */
   .lore-block {
-    border-left: 2px solid #ff4444; padding: 12px 16px; margin-bottom: 28px;
-    background: rgba(255,68,68,0.03);
+    border-left: 2px solid #cc2222; padding: 14px 18px;
+    background: linear-gradient(to right, rgba(204,34,34,0.05), transparent);
+    margin-bottom: 8px;
   }
-  .lore-block p { color: #999; font-size: 12px; line-height: 1.8; margin-bottom: 8px; }
+  .lore-block p {
+    color: #7a6a5a; font-size: 12px; line-height: 1.8; margin-bottom: 8px;
+  }
   .lore-block p:last-child { margin-bottom: 0; }
-  .lore-sm { border-left-color: #e6993a; background: rgba(230,153,58,0.03); }
-  .lore-sm p { color: #888; }
+  .lore-block .red { color: #cc3333; font-weight: 700; }
+  .lore-sm { border-left-color: #5a3a2a; background: linear-gradient(to right, rgba(90,58,42,0.06), transparent); }
+  .lore-sm p { color: #6a5a4a; }
 
-  .controls-section { margin-bottom: 28px; }
-  .ctrl-group { margin-bottom: 16px; }
-  .ctrl-group-title { font-size: 10px; color: #e6993a; letter-spacing: 3px; margin-bottom: 8px; font-weight: 700; }
-  .ctrl-row-lg { display: flex; align-items: flex-start; gap: 12px; padding: 6px 0; border-bottom: 1px solid #1a1816; }
-  .ctrl-key-lg {
-    background: #1a1816; border: 1px solid #555; color: #e6993a;
-    padding: 5px 12px; font-size: 13px; font-weight: 700;
-    min-width: 64px; text-align: center; flex-shrink: 0;
+  /* Controls */
+  .controls-section { margin-bottom: 8px; }
+  .ctrl-group { margin-bottom: 14px; }
+  .ctrl-group-title {
+    font-size: 9px; color: #cc3333; letter-spacing: 4px;
+    margin-bottom: 8px; font-weight: 700;
   }
-  .ctrl-desc-lg { font-size: 13px; color: #aaa; line-height: 1.5; padding-top: 3px; }
+  .ctrl-row-lg {
+    display: flex; align-items: center; gap: 14px;
+    padding: 7px 0; border-bottom: 1px solid #1a1210;
+  }
+  .ctrl-key-lg {
+    background: #0e0a0a; border: 1px solid #331111; color: #cc4444;
+    padding: 4px 10px; font-size: 12px; font-weight: 700;
+    min-width: 60px; text-align: center; flex-shrink: 0;
+    text-shadow: 0 0 8px rgba(204,34,34,0.3);
+  }
+  .ctrl-desc-lg { font-size: 12px; color: #6a5a4a; line-height: 1.4; }
 
+  /* Weapons */
   .weapons-row {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
-    margin-bottom: 28px;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px;
+    margin-bottom: 8px; background: #1a0808;
   }
   .wep-box {
-    border: 1px solid #333; padding: 10px 8px; text-align: center;
+    background: #0e0a0a; padding: 14px 10px; text-align: center;
+    transition: background 0.2s;
   }
-  .wep-name { font-size: 12px; font-weight: 700; color: #fff; margin-bottom: 4px; }
-  .wep-stat { font-size: 10px; color: #666; line-height: 1.5; }
+  .wep-box:hover { background: #140e0e; }
+  .wep-name {
+    font-size: 11px; font-weight: 700; color: #cc4444;
+    letter-spacing: 2px; margin-bottom: 6px;
+  }
+  .wep-stat { font-size: 10px; color: #5a4a3a; line-height: 1.6; }
 
-  .leaderboard { margin-bottom: 24px; font-size: 12px; }
-  .lb-row { display:flex; justify-content:space-between; padding:4px 8px; border-bottom:1px solid #1a1816; }
-  .lb-row:nth-child(even) { background:rgba(230,153,58,0.03); }
-  .lb-rank { color:#e6993a; font-weight:700; width:30px; }
-  .lb-name { color:#c4a882; flex:1; }
-  .lb-score { color:#fff; font-weight:700; width:60px; text-align:right; }
-  .lb-wave { color:#888; width:50px; text-align:right; }
-  .lb-kills { color:#ff4444; width:50px; text-align:right; }
-  .lb-empty { color:#444; text-align:center; padding:16px; }
-  .play-section { text-align: center; margin-top: 8px; }
-  #title input {
-    background: rgba(255,255,255,0.05); border: 1px solid #444; color: #e6993a;
-    padding: 10px 20px; font-size: 16px; font-family: inherit;
-    text-align: center; margin-bottom: 16px; outline: none; width: 260px;
-    letter-spacing: 2px;
-  }
-  #title input::placeholder { color: #555; }
-  #title input:focus { border-color: #e6993a; }
-  #play-btn {
-    background: #ff4444; color: #fff; border: none;
-    padding: 14px 60px; font-size: 22px; font-family: inherit;
-    cursor: pointer; letter-spacing: 6px; font-weight: 800;
+  /* Leaderboard */
+  .leaderboard { margin-bottom: 8px; font-size: 12px; }
+  .lb-row {
+    display: flex; justify-content: space-between;
+    padding: 5px 10px; border-bottom: 1px solid #1a1210;
     transition: background 0.15s;
   }
-  #play-btn:hover { background: #ff6666; }
-  .footer-note {
-    text-align: center; color: #333; font-size: 10px;
-    margin-top: 20px; letter-spacing: 1px;
+  .lb-row:hover { background: rgba(204,34,34,0.04); }
+  .lb-row:nth-child(even) { background: rgba(204,34,34,0.02); }
+  .lb-rank { color: #cc3333; font-weight: 700; width: 30px; }
+  .lb-name { color: #8a7a6a; flex: 1; }
+  .lb-score { color: #c4a882; font-weight: 700; width: 60px; text-align: right; }
+  .lb-wave { color: #5a4a3a; width: 50px; text-align: right; }
+  .lb-kills { color: #cc3333; width: 50px; text-align: right; }
+  .lb-empty { color: #332222; text-align: center; padding: 16px; }
+
+  /* Play section */
+  .play-section {
+    text-align: center; padding: 32px 0 16px;
+    position: relative;
+  }
+  .play-section::before {
+    content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+    width: 200px; height: 1px;
+    background: linear-gradient(to right, transparent, #cc2222, transparent);
+  }
+  #title input {
+    background: rgba(204,34,34,0.04); border: 1px solid #331111; color: #cc4444;
+    padding: 10px 20px; font-size: 15px; font-family: inherit;
+    text-align: center; margin-bottom: 18px; outline: none; width: 260px;
+    letter-spacing: 3px; transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  #title input::placeholder { color: #3a2a2a; }
+  #title input:focus {
+    border-color: #cc3333;
+    box-shadow: 0 0 20px rgba(204,34,34,0.15), inset 0 0 20px rgba(204,34,34,0.05);
+  }
+  #play-btn {
+    background: transparent; color: #cc2222; border: 2px solid #cc2222;
+    padding: 14px 52px; font-size: 18px; font-family: 'Black Ops One', monospace;
+    cursor: pointer; letter-spacing: 6px; font-weight: 400;
+    text-shadow: 0 0 20px rgba(204,34,34,0.5);
+    box-shadow: 0 0 30px rgba(204,34,34,0.1), inset 0 0 30px rgba(204,34,34,0.05);
+    transition: all 0.2s;
+    animation: btnPulse 2s ease-in-out infinite;
+  }
+  #play-btn:hover {
+    background: #cc2222; color: #fff;
+    box-shadow: 0 0 50px rgba(204,34,34,0.4), inset 0 0 30px rgba(255,50,50,0.1);
+    text-shadow: 0 0 10px rgba(255,255,255,0.5);
+  }
+  @keyframes btnPulse {
+    0%, 100% { box-shadow: 0 0 30px rgba(204,34,34,0.1), inset 0 0 30px rgba(204,34,34,0.05); }
+    50% { box-shadow: 0 0 40px rgba(204,34,34,0.25), inset 0 0 30px rgba(204,34,34,0.08); }
   }
 
-  /* HUD */
+  .footer-note {
+    text-align: center; color: #221818; font-size: 9px;
+    margin-top: 24px; letter-spacing: 2px;
+  }
+
+  /* Warning tape decoration */
+  .warning-tape {
+    height: 3px; margin: 0;
+    background: repeating-linear-gradient(
+      -45deg,
+      #cc2222, #cc2222 8px,
+      transparent 8px, transparent 16px
+    );
+    opacity: 0.15;
+  }
+
+  /* ====== HUD (unchanged IDs) ====== */
   #hud { position: absolute; top: 0; left: 0; width: 100%; padding: 10px 20px; display: none; color: #fff; font-size: 14px; }
   #hud-wave { float: left; font-size: 18px; font-weight: 700; }
   #hud-score { float: right; font-size: 18px; font-weight: 700; }
@@ -170,17 +334,28 @@
 <body>
 <div id="ui">
   <div id="title">
-    <div id="title-inner">
-      <h1>SLAUGHTERDOME</h1>
-      <div class="tagline">Wave Survival Arena</div>
-
-      <div class="lore-block">
-        <p>The year is 2089. The old world burned in the Collapse -- wars, plagues, resource death. What rose from the ash wasn't civilization. It was spectacle.</p>
-        <p>THE DOME is the last arena standing. A circular kill-floor ringed by concrete and razor wire, broadcast to every surviving settlement on the net. Trees have reclaimed the edges. Toxic water pools seep through cracked earth as the rounds progress. The walls close in.</p>
-        <p>You are a condemned fighter. Your crimes don't matter. Your name doesn't matter. Only your kill count. Survive enough waves and the Dome grants you something no one else has -- another day alive.</p>
-        <p style="color:#ff4444;font-weight:700;">No one has made it past wave 30.</p>
+    <!-- HERO SECTION -->
+    <div class="hero">
+      <div class="hero-content">
+        <div class="hero-year">2089</div>
+        <h1>SLAUGHTERDOME</h1>
+        <div class="hero-tagline">WAVE SURVIVAL ARENA</div>
+        <div class="hero-lore">
+          The old world burned in the Collapse. What rose from the ash wasn't civilization. It was <strong>spectacle</strong>.
+          You are a condemned fighter. Survive enough waves and the Dome grants you another day alive.
+        </div>
       </div>
+      <div class="scroll-hint">
+        <span>scroll</span>
+        <div class="scroll-arrow"></div>
+      </div>
+    </div>
 
+    <!-- CONTENT -->
+    <div class="warning-tape"></div>
+    <div class="landing-body">
+
+      <div class="section-divider"></div>
       <div class="feature-grid">
         <div class="feature-box"><div class="f-val">3</div><div class="f-label">Weapons</div></div>
         <div class="feature-box"><div class="f-val">16</div><div class="f-label">Upgrades</div></div>
@@ -188,45 +363,49 @@
         <div class="feature-box"><div class="f-val">INF</div><div class="f-label">Waves</div></div>
       </div>
 
-      <div class="section-label">How To Fight</div>
-      <div class="controls-section">
-        <div class="ctrl-group">
-          <div class="ctrl-group-title">MOVEMENT</div>
-          <div class="ctrl-row-lg"><span class="ctrl-key-lg">WASD</span><span class="ctrl-desc-lg">Move</span></div>
-          <div class="ctrl-row-lg"><span class="ctrl-key-lg">SHIFT</span><span class="ctrl-desc-lg">Dash -- 3 charges, chain within 0.3s, grants invulnerability</span></div>
-        </div>
-        <div class="ctrl-group">
-          <div class="ctrl-group-title">COMBAT</div>
-          <div class="ctrl-row-lg"><span class="ctrl-key-lg">LMB</span><span class="ctrl-desc-lg">Shoot -- hold to fire, weapon overheats</span></div>
-          <div class="ctrl-row-lg"><span class="ctrl-key-lg">RMB</span><span class="ctrl-desc-lg">Shockwave -- AoE blast that knocks enemies back</span></div>
-          <div class="ctrl-row-lg"><span class="ctrl-key-lg">Q</span><span class="ctrl-desc-lg">Sword -- 3-hit melee combo, high damage up close</span></div>
-          <div class="ctrl-row-lg"><span class="ctrl-key-lg">MOUSE</span><span class="ctrl-desc-lg">Aim cursor -- all attacks go toward cursor</span></div>
-        </div>
-        <div class="ctrl-group">
-          <div class="ctrl-group-title">TACTICS</div>
-          <div class="ctrl-row-lg"><span class="ctrl-key-lg">E</span><span class="ctrl-desc-lg">Wall mode -- toggle on, then click to place barricades</span></div>
-          <div class="ctrl-row-lg"><span class="ctrl-key-lg">ESC</span><span class="ctrl-desc-lg">Exit wall mode / quit to menu</span></div>
-          <div class="ctrl-row-lg"><span class="ctrl-key-lg">1 2 3</span><span class="ctrl-desc-lg">Pick upgrade between waves</span></div>
-        </div>
-      </div>
-
-      <div class="section-label">Arsenal</div>
-      <div class="weapons-row">
-        <div class="wep-box"><div class="wep-name">PISTOL</div><div class="wep-stat">Balanced<br>Fast fire<br>Default weapon</div></div>
-        <div class="wep-box"><div class="wep-name">SHOTGUN</div><div class="wep-stat">5-bullet spread<br>High burst damage<br>Upgrade to unlock</div></div>
-        <div class="wep-box"><div class="wep-name">FLAMETHROWER</div><div class="wep-stat">Short range spray<br>Rapid fire<br>Upgrade to unlock</div></div>
-      </div>
-
+      <div class="section-divider"></div>
       <div class="section-label">The Arena</div>
       <div class="lore-block lore-sm">
         <p>The Dome shrinks every wave. Trees block movement and bullets. Toxic water pools appear from wave 5, cutting off escape routes. Place walls to funnel enemies. Build combos to unlock rare upgrades. Up to 3 fighters enter together -- cooperate or die alone.</p>
       </div>
 
+      <div class="section-divider"></div>
+      <div class="section-label">How To Fight</div>
+      <div class="controls-section">
+        <div class="ctrl-group">
+          <div class="ctrl-group-title">MOVEMENT</div>
+          <div class="ctrl-row-lg"><span class="ctrl-key-lg">WASD</span><span class="ctrl-desc-lg">Move</span></div>
+          <div class="ctrl-row-lg"><span class="ctrl-key-lg">SPACE</span><span class="ctrl-desc-lg">Dash -- 3 charges, chain within 0.3s, i-frames</span></div>
+        </div>
+        <div class="ctrl-group">
+          <div class="ctrl-group-title">COMBAT</div>
+          <div class="ctrl-row-lg"><span class="ctrl-key-lg">LMB / SHIFT</span><span class="ctrl-desc-lg">Shoot -- hold to fire, weapon overheats</span></div>
+          <div class="ctrl-row-lg"><span class="ctrl-key-lg">RMB</span><span class="ctrl-desc-lg">Shockwave -- AoE knockback blast</span></div>
+          <div class="ctrl-row-lg"><span class="ctrl-key-lg">Q</span><span class="ctrl-desc-lg">Sword -- 3-hit melee combo</span></div>
+        </div>
+        <div class="ctrl-group">
+          <div class="ctrl-group-title">TACTICS</div>
+          <div class="ctrl-row-lg"><span class="ctrl-key-lg">E</span><span class="ctrl-desc-lg">Wall mode -- toggle, then click to place</span></div>
+          <div class="ctrl-row-lg"><span class="ctrl-key-lg">1 2 3</span><span class="ctrl-desc-lg">Pick upgrade between waves</span></div>
+        </div>
+      </div>
+
+      <div class="section-divider"></div>
+      <div class="section-label">Arsenal</div>
+      <div class="weapons-row">
+        <div class="wep-box"><div class="wep-name">PISTOL</div><div class="wep-stat">Balanced<br>Fast fire<br>Default</div></div>
+        <div class="wep-box"><div class="wep-name">SHOTGUN</div><div class="wep-stat">5-bullet spread<br>High burst<br>Upgrade</div></div>
+        <div class="wep-box"><div class="wep-name">FLAMETHROWER</div><div class="wep-stat">Short range<br>Rapid fire<br>Upgrade</div></div>
+      </div>
+
+      <div class="section-divider"></div>
       <div class="section-label">Leaderboard</div>
       <div id="leaderboard" class="leaderboard">Loading...</div>
 
+      <div class="warning-tape"></div>
+
       <div class="play-section">
-        <input id="name-input" type="text" placeholder="Enter name..." maxlength="12">
+        <input id="name-input" type="text" placeholder="Enter name..." maxlength="12" autocomplete="off">
         <br>
         <button id="play-btn">ENTER THE DOME</button>
       </div>
@@ -261,7 +440,7 @@
   <div id="wall-hint">LMB to place -- RMB or E to exit</div>
   <div id="game-tip"></div>
   <div id="arena-warn">ARENA SHRINKING</div>
-  <div id="hud-controls" style="display:none;">WASD move | LMB shoot | Q sword | RMB AoE | E wall | SHIFT dash</div>
+  <div id="hud-controls" style="display:none;">WASD move | LMB/SHIFT shoot | Q sword | RMB AoE | E wall | SPACE dash</div>
   <div id="hud-countdown"></div>
   <div id="upgrade-shop" style="display:none;"></div>
   <div id="upgrade-strip"></div>

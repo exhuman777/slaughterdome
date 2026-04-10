@@ -17,7 +17,7 @@ document.addEventListener('keydown', e => {
   if (e.code === 'KeyE' && !e.repeat) {
     wallMode = !wallMode;
   }
-  if ((e.code === 'ShiftLeft' || e.code === 'ShiftRight') && !e.repeat) dashTriggered = true;
+  if (e.code === 'Space' && !e.repeat) { dashTriggered = true; e.preventDefault(); }
   if (e.code === 'KeyQ' && !e.repeat) swordTriggered = true;
   if (e.code === 'Escape' && wallMode) { wallMode = false; e.stopImmediatePropagation(); }
 });
@@ -74,8 +74,8 @@ export function getInput() {
   const sword = swordTriggered;
   swordTriggered = false;
   // In wall mode, suppress attack -- LMB places walls instead
-  const attack = wallMode ? false : mouse.left;
-  return { dx, dz, attack, special: mouse.right || keys['Space'], aimX: mouse.x, aimZ: mouse.z, wall, dash, sword };
+  const attack = wallMode ? false : (mouse.left || keys['ShiftLeft'] || keys['ShiftRight']);
+  return { dx, dz, attack, special: mouse.right, aimX: mouse.x, aimZ: mouse.z, wall, dash, sword };
 }
 
 let touchMove = { dx: 0, dz: 0 };

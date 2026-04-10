@@ -81,6 +81,18 @@ function place(name, x, z, rotY, scale) {
   mesh.position.set(x, 0, z);
   mesh.rotation.y = rotY || 0;
   if (scale) mesh.scale.multiplyScalar(scale);
+  // Unique color variation per placed decoration
+  mesh.traverse(c => {
+    if (!c.isMesh) return;
+    c.material = c.material.clone();
+    const col = c.material.color;
+    const hsl = {};
+    col.getHSL(hsl);
+    hsl.h += (Math.random() - 0.5) * 0.08;
+    hsl.s *= 0.6 + Math.random() * 0.8;
+    hsl.l *= 0.7 + Math.random() * 0.6;
+    col.setHSL(hsl.h, Math.min(1, hsl.s), Math.min(1, hsl.l));
+  });
   scene.add(mesh);
   placed.push(mesh);
 }
