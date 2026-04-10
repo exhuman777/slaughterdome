@@ -180,7 +180,7 @@ export function updatePlayerMesh(id, x, z, alive, moving, dt) {
 export function setPlayerRotation(id, angle) {
   const pm = playerMeshes.get(id);
   if (!pm) return;
-  pm.group.rotation.y = -angle + Math.PI / 2 + (pm.isModel ? Math.PI : 0);
+  pm.group.rotation.y = -angle + Math.PI / 2;
 }
 
 export function flashPlayer(id) {
