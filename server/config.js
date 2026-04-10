@@ -131,6 +131,15 @@ export const UPGRADE_TIER_WEIGHTS = {
   epic:   { base: 0.07, perComboTier: 0.02 },
 };
 
+export const FLAG = {
+  pickupRadius: 1.5,
+  deliveryRadius: 2.5,
+  minSeparation: 15,
+  obstacleClearance: 4,
+  aliveBonus: 10,
+  deadBonus: 5,
+};
+
 export const OVERHEAT = {
   fastMs: 3000,
   slowMs: 5000,

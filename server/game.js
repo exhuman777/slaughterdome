@@ -4,7 +4,7 @@ import {
   WAVE_REST_MS, SCALING, ENEMY_DEFS, WALL, DASH, SWORD,
   ARENA_SHRINK_PER_WAVE, ARENA_MIN_RADIUS, ARENA_OUTSIDE_DPS,
   waveEnemyCount, enemyTypesForWave, scaleStat,
-  UPGRADE_DEFS, UPGRADE_TIER_WEIGHTS, WEAPONS, OVERHEAT, OBSTACLES,
+  UPGRADE_DEFS, UPGRADE_TIER_WEIGHTS, WEAPONS, OVERHEAT, OBSTACLES, FLAG,
 } from './config.js';
 
 // OBB wall collision -- returns push vector or null
@@ -50,6 +50,7 @@ let nextEnemyId = 1;
 let nextPickupId = 1;
 let nextProjectileId = 1;
 let nextWallId = 1;
+let nextFlagId = 1;
 
 let onGameOver = null;
 
@@ -106,6 +107,7 @@ function tickRoom(room) {
   updatePickups(room);
   updateWalls(room);
   updateCombo(room);
+  updateFlag(room);
   checkWaveClear(room);
   checkGameOver(room);
   room.broadcast(room.getStateSnapshot());
@@ -393,6 +395,11 @@ function damagePlayer(room, player, dmg) {
   room.broadcast({ t: 'hit', target: player.id, dmg: actual, from: 'enemy' });
   if (player.hp <= 0) {
     player.hp = 0; player.alive = false;
+    if (room.flag && room.flag.carriedBy === player.id) {
+      room.flag.x = player.x; room.flag.z = player.z;
+      room.flag.carriedBy = null;
+      room.broadcast({ t: 'flag_dropped', flag: room.flag });
+    }
     room.broadcast({ t: 'death', pid: player.id });
   }
 }
@@ -507,12 +514,15 @@ function updateEnemies(room, dt) {
     }
     if (e.attackCooldown > 0) e.attackCooldown -= TICK_MS;
     if (e.chargeCooldown > 0) e.chargeCooldown -= TICK_MS;
-    // Push from walls (OBB)
-    for (const [, w] of room.walls) {
-      const push = wallPush(e.x, e.z, w, 0.6);
-      if (push) {
-        e.x += push.x; e.z += push.z;
-        w.hp -= e.damage * dt * 0.15;
+    // Push from walls (OBB) -- double pass to prevent fast/small enemies slipping through
+    const wallRadius = e.type === 'swarm' ? 0.8 : 0.6;
+    for (let pass = 0; pass < 2; pass++) {
+      for (const [, w] of room.walls) {
+        const push = wallPush(e.x, e.z, w, wallRadius);
+        if (push) {
+          e.x += push.x; e.z += push.z;
+          if (pass === 0) w.hp -= e.damage * dt * 0.15;
+        }
       }
     }
     // Enemy-obstacle collision removed (trees/env are visual only)
@@ -650,6 +660,86 @@ function getComboTier(combo) {
   return tier;
 }
 
+function findValidPosition(room, avoidPositions, clearance) {
+  const maxR = room.arenaRadius - 2;
+  for (let attempt = 0; attempt < 30; attempt++) {
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 3 + Math.random() * (maxR - 3);
+    const x = Math.cos(angle) * dist;
+    const z = Math.sin(angle) * dist;
+    let valid = true;
+    for (const ob of room.obstacles) {
+      if (ob.type === 'water' && !ob.active) continue;
+      const dx = x - ob.x, dz = z - ob.z;
+      if (dx * dx + dz * dz < clearance * clearance) { valid = false; break; }
+    }
+    if (!valid) continue;
+    for (const [, w] of room.walls) {
+      const dx = x - w.x, dz = z - w.z;
+      if (dx * dx + dz * dz < clearance * clearance) { valid = false; break; }
+    }
+    if (!valid) continue;
+    for (const pos of avoidPositions) {
+      const dx = x - pos.x, dz = z - pos.z;
+      if (dx * dx + dz * dz < pos.minDist * pos.minDist) { valid = false; break; }
+    }
+    if (valid) return { x, z };
+  }
+  return null;
+}
+
+function spawnFlag(room) {
+  const flagPos = findValidPosition(room, [], FLAG.obstacleClearance);
+  if (!flagPos) { room.flagDelivered = true; return; }
+  const deliveryPos = findValidPosition(room, [{ x: flagPos.x, z: flagPos.z, minDist: FLAG.minSeparation }], FLAG.obstacleClearance);
+  if (!deliveryPos) { room.flagDelivered = true; return; }
+  room.flag = { id: 'f' + nextFlagId++, x: flagPos.x, z: flagPos.z, carriedBy: null };
+  room.delivery = { x: deliveryPos.x, z: deliveryPos.z };
+  room.flagDelivered = false;
+  room.broadcast({ t: 'flag_spawn', flag: room.flag, delivery: room.delivery });
+}
+
+function updateFlag(room) {
+  if (!room.flag || room.flagDelivered) return;
+  const flag = room.flag;
+  // If carried, move with carrier
+  if (flag.carriedBy) {
+    const carrier = room.players.get(flag.carriedBy);
+    if (!carrier || !carrier.alive) {
+      // Drop flag at last position
+      if (carrier) { flag.x = carrier.x; flag.z = carrier.z; }
+      flag.carriedBy = null;
+      room.broadcast({ t: 'flag_dropped', flag });
+      return;
+    }
+    flag.x = carrier.x;
+    flag.z = carrier.z;
+    // Check delivery
+    const dx = flag.x - room.delivery.x, dz = flag.z - room.delivery.z;
+    if (dx * dx + dz * dz < FLAG.deliveryRadius * FLAG.deliveryRadius) {
+      room.flagDelivered = true;
+      const bonus = room.enemies.size > 0
+        ? room.wave * FLAG.aliveBonus
+        : room.wave * FLAG.deadBonus;
+      room.score += bonus;
+      room.broadcast({ t: 'flag_delivered', pid: flag.carriedBy, bonus });
+      room.flag = null;
+      return;
+    }
+    return;
+  }
+  // Check pickup proximity for all alive players
+  for (const [, p] of room.players) {
+    if (!p.alive) continue;
+    const dx = p.x - flag.x, dz = p.z - flag.z;
+    if (dx * dx + dz * dz < FLAG.pickupRadius * FLAG.pickupRadius) {
+      flag.carriedBy = p.id;
+      room.broadcast({ t: 'flag_picked', pid: p.id });
+      return;
+    }
+  }
+}
+
 function spawnWave(room) {
   const wave = room.wave;
   // Shrink arena each wave
@@ -678,6 +768,7 @@ function spawnWave(room) {
     spawnEnemy(room, 'titan', wave);
     room.broadcast({ t: 'boss', type: 'titan', abilities: ['charge', 'ranged'] });
   }
+  spawnFlag(room);
 }
 
 function spawnEnemy(room, type, wave) {
@@ -709,7 +800,7 @@ function spawnEnemy(room, type, wave) {
 }
 
 function checkWaveClear(room) {
-  if (room.state !== 'combat' || room.enemies.size > 0) return;
+  if (room.state !== 'combat' || room.enemies.size > 0 || !room.flagDelivered) return;
   room.score += room.wave * 25;
   for (const [, p] of room.players) {
     if (!p.alive) {

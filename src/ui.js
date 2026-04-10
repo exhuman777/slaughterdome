@@ -19,6 +19,7 @@ export function showTitle() {
   if (countdownEl) countdownEl.style.display = 'none';
   if (arenaWarnEl) arenaWarnEl.style.display = 'none';
   if (gameTipEl) gameTipEl.style.display = 'none';
+  if (flagHudEl) flagHudEl.style.display = 'none';
   if (wallModeEl) wallModeEl.style.display = 'none';
   if (wallHintEl) wallHintEl.style.display = 'none';
   if (pingEl) pingEl.style.display = 'none';
@@ -63,6 +64,7 @@ export function showGameOver(wave, score, players) {
   if (countdownEl) countdownEl.style.display = 'none';
   if (arenaWarnEl) arenaWarnEl.style.display = 'none';
   if (gameTipEl) gameTipEl.style.display = 'none';
+  if (flagHudEl) flagHudEl.style.display = 'none';
   if (wallModeEl) wallModeEl.style.display = 'none';
   if (wallHintEl) wallHintEl.style.display = 'none';
   goWaveVal.textContent = wave;
@@ -211,6 +213,22 @@ function hideInfo() { if (infoEl) infoEl.style.display = 'none'; }
 export function updateInfo(kills) {
   if (!infoEl) return;
   infoEl.innerHTML = '<div class="info-row">KILLS: <span style="color:#fff">' + kills + '</span></div>';
+}
+
+// Flag HUD
+const flagHudEl = document.getElementById('flag-hud');
+
+export function updateFlagHUD(showFlag, carrying) {
+  if (!flagHudEl) return;
+  if (!showFlag) { flagHudEl.style.display = 'none'; return; }
+  flagHudEl.style.display = 'block';
+  if (carrying) {
+    flagHudEl.textContent = 'CARRYING FLAG -- DELIVER IT';
+    flagHudEl.className = 'carrying';
+  } else {
+    flagHudEl.textContent = 'CAPTURE THE FLAG';
+    flagHudEl.className = 'capture';
+  }
 }
 
 // Game tips

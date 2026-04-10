@@ -10,7 +10,7 @@ import { showGunShot, showSpecialAttack, showDamageNumber, showExplosion, showHi
 import { playHit, playKill, playExplosion, playWaveStart, playBossSpawn, playPickup, playDeath, playCombo, resumeAudio, playShot, playWallPlace, playDash, playWallDestroy, playWaveClear, playSword } from './audio.js';
 import { getInput, getMobileInput, isMobile, setupMobileControls, isWallMode, exitWallMode, resetInput } from './input.js';
 import { connect, sendInput, sendPing, getState, getMyId, getPing, drainEvents, disconnect } from './network.js';
-import { showTitle, showHUD, showGameOver, updateHUD, showCombo, updatePing, getPlayerName, updateUpgradeDisplay, updateWeaponHUD, showControlsHint, hideControlsHint, updateCountdown, updateAbilities, updateInfo, updatePlayers, showYouDied, hideYouDied, updateWallMode, showGameTip, showArenaWarn } from './ui.js';
+import { showTitle, showHUD, showGameOver, updateHUD, showCombo, updatePing, getPlayerName, updateUpgradeDisplay, updateWeaponHUD, showControlsHint, hideControlsHint, updateCountdown, updateAbilities, updateInfo, updatePlayers, showYouDied, hideYouDied, updateWallMode, showGameTip, showArenaWarn, updateFlagHUD } from './ui.js';
 import { showUpgradeShop, hideUpgradeShop } from './upgrades.js';
 import { loadModels, modelsReady, cloneTree } from './models.js';
 import { loadDecorations, buildArenaDecorations, clearDecorations } from './decorations.js';
@@ -66,6 +66,45 @@ const ghostWallMat = new THREE.MeshBasicMaterial({ color: 0x4488ff, transparent:
 const ghostWall = new THREE.Mesh(wallGeo.clone(), ghostWallMat);
 ghostWall.visible = false;
 ghostWall.position.y = 1.25;
+
+// Flag capture meshes
+let flagGroup = null;
+let deliveryMesh = null;
+let flagAnimTime = 0;
+
+function createFlagMesh() {
+  const group = new THREE.Group();
+  const poleGeo = new THREE.CylinderGeometry(0.06, 0.06, 3, 6);
+  const poleMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.6, roughness: 0.3 });
+  const pole = new THREE.Mesh(poleGeo, poleMat);
+  pole.position.y = 1.5;
+  group.add(pole);
+  const clothGeo = new THREE.PlaneGeometry(1.2, 0.8, 4, 2);
+  const clothMat = new THREE.MeshStandardMaterial({ color: 0xe6993a, emissive: 0xe6993a, emissiveIntensity: 0.6, side: THREE.DoubleSide });
+  const cloth = new THREE.Mesh(clothGeo, clothMat);
+  cloth.position.set(0.65, 2.5, 0);
+  cloth.name = 'flagCloth';
+  group.add(cloth);
+  const light = new THREE.PointLight(0xe6993a, 2, 8);
+  light.position.y = 2;
+  group.add(light);
+  return group;
+}
+
+function createDeliveryMesh() {
+  const geo = new THREE.TorusGeometry(2.5, 0.15, 8, 32);
+  geo.rotateX(Math.PI / 2);
+  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffcc44, emissiveIntensity: 0.8, transparent: true, opacity: 0.7 });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.y = 0.1;
+  mesh.userData.mat = mat;
+  return mesh;
+}
+
+function removeFlagMeshes() {
+  if (flagGroup) { scene.remove(flagGroup); flagGroup = null; }
+  if (deliveryMesh) { scene.remove(deliveryMesh); deliveryMesh = null; }
+}
 
 // Client-side prediction
 const PREDICTED_SPEED = 10;
@@ -175,6 +214,7 @@ function quitToMenu() {
   knownPlayers.clear();
   knownEnemies.clear();
   nearMissed.clear();
+  removeFlagMeshes();
   timeScale = 1.0;
   for (const c of corpses) { scene.remove(c); c.material.dispose(); }
   corpses.length = 0;
@@ -209,6 +249,7 @@ async function startGame() {
     obstacleMeshes.clear();
     cachedObstacles = [];
     nearMissed.clear();
+    removeFlagMeshes();
     timeScale = 1.0;
       hasPrediction = false;
     predDashTimer = 0;
@@ -567,6 +608,41 @@ function processState(state, dt) {
     }
   }
 
+  // Sync flag position
+  if (state.flag && !state.flagDelivered) {
+    if (!flagGroup) { flagGroup = createFlagMesh(); scene.add(flagGroup); }
+    if (state.flag.carriedBy) {
+      const carrier = state.players.find(p => p.id === state.flag.carriedBy);
+      if (carrier) {
+        const cx = (carrier.id === myId && hasPrediction) ? predictedX : carrier.pos[0];
+        const cz = (carrier.id === myId && hasPrediction) ? predictedZ : carrier.pos[2];
+        flagGroup.position.set(cx, 0, cz);
+      }
+    } else {
+      flagGroup.position.set(state.flag.x, 0, state.flag.z);
+    }
+    // Animate flag cloth waving
+    flagAnimTime += dt * 3;
+    const cloth = flagGroup.getObjectByName('flagCloth');
+    if (cloth) {
+      const geo = cloth.geometry;
+      const pos = geo.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        const ox = pos.getX(i);
+        pos.setZ(i, Math.sin(flagAnimTime + ox * 3) * 0.15);
+      }
+      pos.needsUpdate = true;
+    }
+    if (!deliveryMesh) { deliveryMesh = createDeliveryMesh(); scene.add(deliveryMesh); }
+    deliveryMesh.position.set(state.delivery.x, 0.1, state.delivery.z);
+    deliveryMesh.visible = true;
+    const pulse = 0.5 + Math.sin(Date.now() * 0.003) * 0.3;
+    deliveryMesh.userData.mat.opacity = pulse;
+  } else {
+    if (flagGroup) { scene.remove(flagGroup); flagGroup = null; }
+    if (deliveryMesh) deliveryMesh.visible = false;
+  }
+
   const me = state.players.find(p => p.id === myId);
   if (me) {
     updateHUD(state.wave, state.score, me.hp, me.maxHp);
@@ -577,6 +653,8 @@ function processState(state, dt) {
     updateWeaponHUD(me.weapon, me.overheated, me.heatPct || 0);
     updateAbilities(me.wallCharges !== undefined ? me.wallCharges : 5, me.specialCd || 0, dashCharges, me.swordCd || 0);
     updateInfo(me.kills || 0);
+    const carrying = state.flag && state.flag.carriedBy === myId;
+    updateFlagHUD(state.phase === 'combat' && !state.flagDelivered, carrying);
     // Show YOU DIED when player dies but game continues
     if (!me.alive && wasAlive) {
       showYouDied();
@@ -720,6 +798,41 @@ function handleEvent(ev) {
       showExplosion(ev.pos[0], ev.pos[2], ev.radius);
       playExplosion();
       break;
+    case 'flag_spawn': {
+      removeFlagMeshes();
+      flagGroup = createFlagMesh();
+      if (ev.flag) flagGroup.position.set(ev.flag.x, 0, ev.flag.z);
+      scene.add(flagGroup);
+      deliveryMesh = createDeliveryMesh();
+      if (ev.delivery) deliveryMesh.position.set(ev.delivery.x, 0.1, ev.delivery.z);
+      scene.add(deliveryMesh);
+      break;
+    }
+    case 'flag_picked': {
+      const picker = getState()?.players?.find(p => p.id === ev.pid);
+      const isMe = ev.pid === getMyId();
+      const fx = isMe && hasPrediction ? predictedX : (picker ? picker.pos[0] : 0);
+      const fz = isMe && hasPrediction ? predictedZ : (picker ? picker.pos[2] : 0);
+      spawnSparks(fx, fz, 0xe6993a, 8);
+      spawnFloatingText(fx + 1.5, fz, 'FLAG!', '#e6993a', 2);
+      break;
+    }
+    case 'flag_dropped': {
+      if (ev.flag) {
+        spawnSparks(ev.flag.x, ev.flag.z, 0xff4444, 6);
+        spawnFloatingText(ev.flag.x + 1, ev.flag.z, 'DROPPED', '#ff4444', 2);
+      }
+      break;
+    }
+    case 'flag_delivered': {
+      const meD = getState()?.players?.find(p => p.id === getMyId());
+      const dx = meD ? (hasPrediction ? predictedX : meD.pos[0]) : 0;
+      const dz = meD ? (hasPrediction ? predictedZ : meD.pos[2]) : 0;
+      spawnKillParticles(dx, dz, 0xffcc44);
+      spawnSparks(dx, dz, 0xffcc44, 12);
+      if (ev.bonus) spawnFloatingText(dx + 1.5, dz, '+' + ev.bonus + ' BONUS', '#ffcc44', 3);
+      break;
+    }
     case 'gameover':
       gameActive = false;
       hasPrediction = false;

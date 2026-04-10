@@ -68,6 +68,9 @@ export class Room {
     this.waveTimer = 0;
     this.cleanupTimer = null;
     this.obstacles = generateObstacles();
+    this.flag = null;
+    this.delivery = null;
+    this.flagDelivered = false;
   }
 
   get playerCount() { return this.players.size; }
@@ -105,6 +108,12 @@ export class Room {
   }
 
   removePlayer(playerId) {
+    if (this.flag && this.flag.carriedBy === playerId) {
+      const p = this.players.get(playerId);
+      if (p) { this.flag.x = p.x; this.flag.z = p.z; }
+      this.flag.carriedBy = null;
+      this.broadcast({ t: 'flag_dropped', flag: this.flag });
+    }
     this.players.delete(playerId);
     this.broadcast({ t: 'leave', pid: playerId });
     if (this.isEmpty) {
@@ -180,6 +189,7 @@ export class Room {
       wave: this.wave, score: this.score, combo: this.combo, phase: this.state,
       arenaRadius: this.arenaRadius, waveTimer: this.waveTimer,
       playerCount: this.playerCount,
+      flag: this.flag, delivery: this.delivery, flagDelivered: this.flagDelivered,
     };
   }
 }
