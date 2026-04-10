@@ -15,6 +15,12 @@ import { showUpgradeShop, hideUpgradeShop } from './upgrades.js';
 import { loadModels, modelsReady, cloneTree } from './models.js';
 import { loadDecorations, buildArenaDecorations, clearDecorations } from './decorations.js';
 
+// Debug: catch and display ALL errors visibly
+window.onerror = (msg, src, line) => {
+  const el = document.getElementById('leaderboard');
+  if (el) el.innerHTML = '<div style="color:#ff4444">JS ERROR: ' + msg + '<br>at ' + src + ':' + line + '</div>';
+};
+
 // Screen edge damage pulse
 const flashOverlay = document.getElementById('flash-overlay');
 function pulseDamageOverlay() {
@@ -172,11 +178,16 @@ function quitToMenu() {
 }
 
 async function startGame() {
+  // Debug: visible status on title page
+  const dbg = document.getElementById('leaderboard');
+  if (dbg) dbg.textContent = 'Connecting...';
   resumeAudio();
   hideUpgradeShop();
   const name = getPlayerName();
   try {
+    if (dbg) dbg.textContent = 'Connecting to server...';
     await connect(name);
+    if (dbg) dbg.textContent = 'Connected! Loading game...';
     resetInput();
     gameActive = true;
     showHUD();
@@ -207,6 +218,7 @@ async function startGame() {
     buildArenaDecorations(40);
   } catch (err) {
     console.error('Connection failed:', err);
+    if (dbg) dbg.textContent = 'ERROR: ' + err.message;
   }
 }
 
