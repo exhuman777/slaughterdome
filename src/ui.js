@@ -198,7 +198,7 @@ export function updateAbilities(wallCharges, specialCd, dashCharges, swordCd) {
     '<div class="ab-row"><span class="ab-key">[Q]</span> SWORD ' + (swordReady ? '<span class="ab-val">READY</span>' : '<span class="ab-cd">' + (swordCd / 1000).toFixed(1) + 's</span>') + '</div>' +
     '<div class="ab-row"><span class="ab-key">[E]</span> WALL ' + wallPips + '</div>' +
     '<div class="ab-row"><span class="ab-key">[RMB]</span> AoE ' + (specialReady ? '<span class="ab-val">READY</span>' : '<span class="ab-cd">' + Math.ceil(specialCd / 1000) + 's</span>') + '</div>' +
-    '<div class="ab-row"><span class="ab-key">[SHIFT]</span> DASH ' + dashPips + '</div>';
+    '<div class="ab-row"><span class="ab-key">[SPACE]</span> DASH ' + dashPips + '</div>';
 }
 
 export function updateWallMode(active) {
