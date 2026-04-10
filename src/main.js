@@ -117,32 +117,68 @@ function createFlagMesh() {
     clone.traverse(c => { if (c.isMesh) c.material = c.material.clone(); });
     group.add(clone);
   } else {
-    // Fallback procedural flag
-    const poleGeo = new THREE.CylinderGeometry(0.06, 0.06, 3, 6);
-    const poleMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.6, roughness: 0.3 });
+    // Fallback procedural flag -- thick pole + big cloth
+    const poleGeo = new THREE.CylinderGeometry(0.12, 0.12, 4, 8);
+    const poleMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, emissive: 0x444444, emissiveIntensity: 0.3, metalness: 0.6, roughness: 0.3 });
     const pole = new THREE.Mesh(poleGeo, poleMat);
-    pole.position.y = 1.5;
+    pole.position.y = 2;
     group.add(pole);
-    const clothGeo = new THREE.PlaneGeometry(1.2, 0.8);
-    const clothMat = new THREE.MeshStandardMaterial({ color: 0xe6993a, emissive: 0xe6993a, emissiveIntensity: 0.6, side: THREE.DoubleSide });
+    const clothGeo = new THREE.PlaneGeometry(1.8, 1.2);
+    const clothMat = new THREE.MeshStandardMaterial({ color: 0xe6993a, emissive: 0xe6993a, emissiveIntensity: 0.8, side: THREE.DoubleSide });
     const cloth = new THREE.Mesh(clothGeo, clothMat);
-    cloth.position.set(0.65, 2.5, 0);
+    cloth.position.set(0.95, 3.2, 0);
     group.add(cloth);
   }
-  const light = new THREE.PointLight(0xe6993a, 2, 8);
-  light.position.y = 2;
+  // Bright point light
+  const light = new THREE.PointLight(0xe6993a, 4, 12);
+  light.position.y = 3;
   group.add(light);
+  // Ground glow ring under flag
+  const ringGeo = new THREE.RingGeometry(1.0, 1.5, 24);
+  ringGeo.rotateX(-Math.PI / 2);
+  const ringMat = new THREE.MeshBasicMaterial({ color: 0xe6993a, transparent: true, opacity: 0.4, side: THREE.DoubleSide });
+  const ring = new THREE.Mesh(ringGeo, ringMat);
+  ring.position.y = 0.05;
+  ring.name = 'flagRing';
+  group.add(ring);
+  // Vertical beam
+  const beamGeo = new THREE.CylinderGeometry(0.15, 0.15, 10, 6);
+  const beamMat = new THREE.MeshBasicMaterial({ color: 0xe6993a, transparent: true, opacity: 0.15 });
+  const beam = new THREE.Mesh(beamGeo, beamMat);
+  beam.position.y = 5;
+  beam.name = 'flagBeam';
+  group.add(beam);
   return group;
 }
 
 function createDeliveryMesh() {
-  const geo = new THREE.TorusGeometry(2.5, 0.15, 8, 32);
+  const group = new THREE.Group();
+  // Outer ring
+  const geo = new THREE.TorusGeometry(2.5, 0.2, 8, 32);
   geo.rotateX(Math.PI / 2);
-  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffcc44, emissiveIntensity: 0.8, transparent: true, opacity: 0.7 });
-  const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.y = 0.1;
-  mesh.userData.mat = mat;
-  return mesh;
+  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffcc44, emissiveIntensity: 1.0, transparent: true, opacity: 0.8 });
+  const ring = new THREE.Mesh(geo, mat);
+  ring.position.y = 0.1;
+  group.add(ring);
+  // Inner ring
+  const geo2 = new THREE.TorusGeometry(1.5, 0.1, 8, 24);
+  geo2.rotateX(Math.PI / 2);
+  const mat2 = new THREE.MeshBasicMaterial({ color: 0xffcc44, transparent: true, opacity: 0.3 });
+  const ring2 = new THREE.Mesh(geo2, mat2);
+  ring2.position.y = 0.08;
+  group.add(ring2);
+  // Vertical beam at delivery
+  const beamGeo = new THREE.CylinderGeometry(0.2, 0.2, 12, 6);
+  const beamMat = new THREE.MeshBasicMaterial({ color: 0xffcc44, transparent: true, opacity: 0.1 });
+  const beam = new THREE.Mesh(beamGeo, beamMat);
+  beam.position.y = 6;
+  group.add(beam);
+  // Point light
+  const light = new THREE.PointLight(0xffcc44, 3, 10);
+  light.position.y = 1;
+  group.add(light);
+  group.userData.mat = mat;
+  return group;
 }
 
 function removeFlagMeshes() {
@@ -669,11 +705,15 @@ function processState(state, dt) {
     flagAnimTime += dt;
     flagGroup.rotation.y = Math.sin(flagAnimTime * 2) * 0.3;
     flagGroup.position.y = Math.sin(flagAnimTime * 3) * 0.15;
+    // Pulse the ground ring
+    const flagRing = flagGroup.getObjectByName('flagRing');
+    if (flagRing) flagRing.material.opacity = 0.2 + Math.sin(flagAnimTime * 4) * 0.2;
     if (!deliveryMesh) { deliveryMesh = createDeliveryMesh(); scene.add(deliveryMesh); }
-    deliveryMesh.position.set(state.delivery.x, 0.1, state.delivery.z);
+    deliveryMesh.position.set(state.delivery.x, 0, state.delivery.z);
     deliveryMesh.visible = true;
     const pulse = 0.5 + Math.sin(Date.now() * 0.003) * 0.3;
     deliveryMesh.userData.mat.opacity = pulse;
+    deliveryMesh.rotation.y += dt * 0.5;
   } else {
     if (flagGroup) { scene.remove(flagGroup); flagGroup = null; }
     if (deliveryMesh) deliveryMesh.visible = false;
@@ -840,7 +880,7 @@ function handleEvent(ev) {
       if (ev.flag) flagGroup.position.set(ev.flag.x, 0, ev.flag.z);
       scene.add(flagGroup);
       deliveryMesh = createDeliveryMesh();
-      if (ev.delivery) deliveryMesh.position.set(ev.delivery.x, 0.1, ev.delivery.z);
+      if (ev.delivery) deliveryMesh.position.set(ev.delivery.x, 0, ev.delivery.z);
       scene.add(deliveryMesh);
       break;
     }

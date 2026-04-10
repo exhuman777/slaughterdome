@@ -137,7 +137,7 @@ export const FLAG = {
   magnetRange: 6,
   magnetSpeed: 10,
   minSeparation: 15,
-  obstacleClearance: 4,
+  obstacleClearance: 2.5,
   aliveBonus: 10,
   deadBonus: 5,
 };
