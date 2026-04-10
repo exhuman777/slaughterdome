@@ -15,10 +15,16 @@ import { showUpgradeShop, hideUpgradeShop } from './upgrades.js';
 import { loadModels, modelsReady, cloneTree } from './models.js';
 import { loadDecorations, buildArenaDecorations, clearDecorations } from './decorations.js';
 
-// Debug: catch and display ALL errors visibly
+// Debug: catch and display ALL errors in persistent overlay
 window.onerror = (msg, src, line) => {
-  const el = document.getElementById('leaderboard');
-  if (el) el.innerHTML = '<div style="color:#ff4444">JS ERROR: ' + msg + '<br>at ' + src + ':' + line + '</div>';
+  let el = document.getElementById('dbg-err');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'dbg-err';
+    el.style.cssText = 'position:fixed;top:0;left:0;width:100%;background:#220000;color:#ff4444;font-size:14px;padding:12px;z-index:9999;white-space:pre-wrap;font-family:monospace;';
+    document.body.appendChild(el);
+  }
+  el.textContent += 'ERROR: ' + msg + '\nat ' + (src || '').split('/').pop() + ':' + line + '\n\n';
 };
 
 // Screen edge damage pulse
