@@ -21,8 +21,12 @@ function dbg(msg) { console.log('[MONSTER]', msg); }
 export async function loadMonsterModels() {
   dbg('Starting load...');
   try {
-    const { GLTFLoader } = await import('https://esm.sh/three@0.162.0/addons/loaders/GLTFLoader.js');
-    dbg('GLTFLoader OK');
+    const [{ GLTFLoader }, SkeletonUtils] = await Promise.all([
+      import('https://esm.sh/three@0.162.0/addons/loaders/GLTFLoader.js'),
+      import('https://esm.sh/three@0.162.0/addons/utils/SkeletonUtils.js'),
+    ]);
+    globalThis._MonsterSkeletonUtils = SkeletonUtils;
+    dbg('GLTFLoader + SkeletonUtils OK');
     const gltfLoader = new GLTFLoader();
     for (const name of MONSTER_FILES) {
       try {
@@ -32,7 +36,6 @@ export async function loadMonsterModels() {
         if (!gltf || !gltf.scene) { dbg(name + ': NO SCENE'); continue; }
         const visual = ENEMY_VISUALS[name] || ENEMY_VISUALS.grunt;
         const obj = gltf.scene;
-        // Count meshes in loaded model
         let meshCount = 0;
         obj.traverse(c => { if (c.isMesh) meshCount++; });
         obj.updateWorldMatrix(true, true);
@@ -46,16 +49,9 @@ export async function loadMonsterModels() {
           box.setFromObject(obj);
           obj.position.y = -box.min.y;
         }
-        // Use MeshBasicMaterial -- no lighting dependency, always visible
-        const brightMat = new THREE.MeshBasicMaterial({ color: visual.color });
-        const mats = [];
-        obj.traverse(c => {
-          if (!c.isMesh) return;
-          c.castShadow = true;
-          c.material = brightMat.clone();
-          mats.push(c.material);
-        });
-        monsterTemplates[name] = { scene: obj, mats, visual };
+        // Do NOT modify template materials -- keep originals intact for proper cloning
+        obj.traverse(c => { if (c.isMesh) c.castShadow = true; });
+        monsterTemplates[name] = { scene: obj, visual };
       } catch (e) { dbg(name + ': ERR ' + e.message); }
     }
     modelsLoaded = Object.keys(monsterTemplates).length > 0;
@@ -66,13 +62,17 @@ export async function loadMonsterModels() {
 function cloneMonster(type) {
   const tmpl = monsterTemplates[type];
   if (!tmpl) return null;
-  const clone = tmpl.scene.clone();
+  // Use SkeletonUtils.clone for proper deep clone (matches working player.js pattern)
+  const SU = globalThis._MonsterSkeletonUtils;
+  const clone = SU ? SU.clone(tmpl.scene) : tmpl.scene.clone();
   const visual = tmpl.visual || ENEMY_VISUALS[type] || ENEMY_VISUALS.grunt;
   const mats = [];
   clone.traverse(c => {
-    if (c.isMesh && c.material) {
-      c.material = c.material.clone();
+    if (c.isMesh) {
+      // Fresh MeshBasicMaterial per clone -- no lighting dependency, always visible
+      c.material = new THREE.MeshBasicMaterial({ color: visual.color });
       c.material._origColor = new THREE.Color(visual.color);
+      c.frustumCulled = false;
       mats.push(c.material);
     }
   });
