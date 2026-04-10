@@ -169,6 +169,20 @@
   .lore-sm { border-left-color: #5a3a2a; background: linear-gradient(to right, rgba(90,58,42,0.06), transparent); }
   .lore-sm p { color: #9a8a7a; }
 
+  /* Action banner */
+  .action-banner {
+    margin: 24px -60px; position: relative; overflow: hidden;
+    border-top: 2px solid #331111; border-bottom: 2px solid #331111;
+  }
+  .action-banner img {
+    width: 100%; display: block; opacity: 0.85;
+    filter: saturate(1.2) contrast(1.1);
+  }
+  .action-banner::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(to bottom, rgba(10,8,8,0.3) 0%, transparent 20%, transparent 80%, rgba(10,8,8,0.5) 100%);
+  }
+
   /* Controls */
   .controls-section { margin-bottom: 8px; }
   .ctrl-group { margin-bottom: 14px; }
@@ -440,6 +454,10 @@
       <div class="section-label">The Arena</div>
       <div class="lore-block lore-sm">
         <p>The Dome shrinks every wave. Trees block movement and bullets. Toxic water pools appear from wave 5, cutting off escape routes. Place walls to funnel enemies. Build combos to unlock rare upgrades. Up to 3 fighters enter together -- cooperate or die alone.</p>
+      </div>
+
+      <div class="action-banner">
+        <img src="images/hero-action.jpg" alt="Arena combat">
       </div>
 
       <div class="section-divider"></div>
