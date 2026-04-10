@@ -208,7 +208,14 @@ const dyingEnemies = [];
 export function removeEnemyMesh(id) {
   const em = enemyMeshes.get(id);
   if (em) {
-    dyingEnemies.push({ group: em.group, mat: em.mat, modelMats: em.modelMats, isModel: em.isModel, timer: 0.25 });
+    // Remove HP bars before death anim
+    em.group.remove(em.hpFill);
+    em.group.children.forEach(c => { if (c.geometry && c.geometry.type === 'PlaneGeometry') em.group.remove(c); });
+    const tumbleDir = (Math.random() - 0.5) * 2;
+    dyingEnemies.push({
+      group: em.group, mat: em.mat, modelMats: em.modelMats, isModel: em.isModel,
+      timer: 0.5, tumbleDir, startY: em.group.position.y,
+    });
     enemyMeshes.delete(id);
   }
 }
@@ -217,9 +224,14 @@ export function updateDyingEnemies(dt) {
   for (let i = dyingEnemies.length - 1; i >= 0; i--) {
     const d = dyingEnemies[i];
     d.timer -= dt;
-    const t = Math.max(0, d.timer / 0.25);
-    d.group.scale.set(t, t, t);
-    d.group.position.y += dt * 3;
+    const t = Math.max(0, d.timer / 0.5);
+    // Tumble sideways and flatten
+    d.group.rotation.z += d.tumbleDir * dt * 8;
+    d.group.rotation.x += dt * 3;
+    d.group.scale.y = t;
+    d.group.scale.x = 0.8 + (1 - t) * 0.3;
+    d.group.scale.z = 0.8 + (1 - t) * 0.3;
+    d.group.position.y = d.startY * t;
     if (d.isModel && d.modelMats) {
       d.modelMats.forEach(m => { m.opacity = t; m.transparent = true; });
     } else if (d.mat) {

@@ -78,10 +78,15 @@ let predVelX = 0, predVelZ = 0;
 let prevInputDx = 0, prevInputDz = 0;
 let speedTrailCounter = 0;
 
-// Persistent corpses
+// Persistent corpses / blood pools
 const corpses = [];
-const corpseGeo = new THREE.PlaneGeometry(1.2, 1.2);
-corpseGeo.rotateX(-Math.PI / 2);
+const MAX_CORPSES = 60;
+const corpseGeos = [
+  (() => { const g = new THREE.CircleGeometry(0.6, 8); g.rotateX(-Math.PI / 2); return g; })(),
+  (() => { const g = new THREE.CircleGeometry(0.8, 10); g.rotateX(-Math.PI / 2); return g; })(),
+  (() => { const g = new THREE.CircleGeometry(1.0, 12); g.rotateX(-Math.PI / 2); return g; })(),
+];
+const BLOOD_COLORS = [0x660000, 0x550000, 0x440000, 0x3a0000, 0x771111];
 
 // Environment obstacles
 const obstacleMeshes = new Map();
@@ -618,15 +623,20 @@ function handleEvent(ev) {
     case 'kill': {
       spawnGoreChunks(ev.pos[0], ev.pos[2]);
       spawnKillParticles(ev.pos[0], ev.pos[2], 0xff4444);
+      spawnBloodDrops(ev.pos[0], ev.pos[2]);
       playKill();
-      // Persistent corpse decal
-      const corpseMat = new THREE.MeshBasicMaterial({ color: 0x440000, transparent: true, opacity: 0.4, side: THREE.DoubleSide });
-      const corpseMesh = new THREE.Mesh(corpseGeo, corpseMat);
-      corpseMesh.position.set(ev.pos[0], 0.02, ev.pos[2]);
+      // Blood pool decal (varied size and color)
+      const bcolor = BLOOD_COLORS[Math.floor(Math.random() * BLOOD_COLORS.length)];
+      const bgeo = corpseGeos[Math.floor(Math.random() * corpseGeos.length)];
+      const corpseMat = new THREE.MeshBasicMaterial({ color: bcolor, transparent: true, opacity: 0.35 + Math.random() * 0.2, side: THREE.DoubleSide });
+      const corpseMesh = new THREE.Mesh(bgeo, corpseMat);
+      corpseMesh.position.set(ev.pos[0] + (Math.random() - 0.5) * 0.5, 0.02, ev.pos[2] + (Math.random() - 0.5) * 0.5);
       corpseMesh.rotation.y = Math.random() * Math.PI * 2;
+      const bscale = 0.8 + Math.random() * 0.6;
+      corpseMesh.scale.set(bscale, 1, bscale);
       scene.add(corpseMesh);
       corpses.push(corpseMesh);
-      if (corpses.length > 25) { const old = corpses.shift(); scene.remove(old); old.material.dispose(); }
+      if (corpses.length > MAX_CORPSES) { const old = corpses.shift(); scene.remove(old); old.material.dispose(); }
       // Score popup at kill location
       const combo = ev.combo || 0;
       const wave = getState()?.wave || 1;
@@ -646,7 +656,10 @@ function handleEvent(ev) {
       }
       if (ev.pos) {
         showDamageNumber(ev.pos[0], ev.pos[2], ev.dmg, ev.crit);
-        if (!isMe) showHitImpact(ev.pos[0], ev.pos[2]);
+        if (!isMe) {
+          showHitImpact(ev.pos[0], ev.pos[2]);
+          spawnBloodDrops(ev.pos[0], ev.pos[2]);
+        }
       }
       playHit(ev.dmg);
       flashEnemy(ev.target);

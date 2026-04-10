@@ -2,7 +2,7 @@ import * as THREE from 'https://esm.sh/three@0.162.0';
 import { scene } from './renderer.js';
 
 const particles = [];
-const MAX_PARTICLES = 150;
+const MAX_PARTICLES = 200;
 
 // Shared geometries - never recreated
 const boxGeo = new THREE.BoxGeometry(0.2, 0.2, 0.2);
