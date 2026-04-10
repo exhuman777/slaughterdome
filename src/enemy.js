@@ -16,11 +16,7 @@ const MONSTER_FILES = ['grunt', 'dasher', 'brute', 'spitter', 'swarm', 'shielder
 const monsterTemplates = {};
 let modelsLoaded = false;
 
-// Debug overlay for monster loading diagnostics
-const _dbg = document.createElement('div');
-_dbg.style.cssText = 'position:fixed;top:0;right:0;background:rgba(0,0,0,0.85);color:#0f0;font:12px monospace;padding:6px 10px;z-index:9999;max-width:400px;pointer-events:none;';
-document.body.appendChild(_dbg);
-function dbg(msg) { _dbg.textContent += msg + '\n'; console.log('[MONSTER]', msg); }
+function dbg(msg) { console.log('[MONSTER]', msg); }
 
 export async function loadMonsterModels() {
   dbg('Starting load...');
@@ -50,14 +46,8 @@ export async function loadMonsterModels() {
           box.setFromObject(obj);
           obj.position.y = -box.min.y;
         }
-        // Replace all materials with bright self-lit materials
-        const brightMat = new THREE.MeshStandardMaterial({
-          color: visual.color,
-          emissive: visual.color,
-          emissiveIntensity: 2.0,
-          roughness: 0.3,
-          metalness: 0.1,
-        });
+        // Use MeshBasicMaterial -- no lighting dependency, always visible
+        const brightMat = new THREE.MeshBasicMaterial({ color: visual.color });
         const mats = [];
         obj.traverse(c => {
           if (!c.isMesh) return;
@@ -82,8 +72,7 @@ function cloneMonster(type) {
   clone.traverse(c => {
     if (c.isMesh && c.material) {
       c.material = c.material.clone();
-      c.material._origEmissive = new THREE.Color(visual.emissive);
-      c.material._origEmissiveIntensity = 1.5;
+      c.material._origColor = new THREE.Color(visual.color);
       mats.push(c.material);
     }
   });
@@ -180,9 +169,7 @@ export function updateEnemyMesh(id, x, z, hp, maxHp, dt) {
     const fi = Math.max(0, em.flashTimer / 0.15);
     if (em.isModel && em.modelMats) {
       em.modelMats.forEach(m => {
-        m.emissive = m.emissive || new THREE.Color();
-        m.emissive.set(0xffffff);
-        m.emissiveIntensity = 2 * fi;
+        m.color.set(0xffffff).lerp(m._origColor, 1 - fi);
       });
     } else if (em.mat) {
       em.mat.emissive.set(0xffffff);
@@ -191,10 +178,7 @@ export function updateEnemyMesh(id, x, z, hp, maxHp, dt) {
   } else {
     if (em.isModel && em.modelMats) {
       em.modelMats.forEach(m => {
-        if (m.emissiveIntensity !== (m._origEmissiveIntensity || 1.5)) {
-          m.emissive.copy(m._origEmissive || new THREE.Color(0x441111));
-          m.emissiveIntensity = m._origEmissiveIntensity || 1.5;
-        }
+        if (m._needsRestore) { m.color.copy(m._origColor); m._needsRestore = false; }
       });
     } else if (em.mat) {
       const visual = ENEMY_VISUALS[em.type] || ENEMY_VISUALS.grunt;
@@ -211,7 +195,10 @@ export function updateEnemyMesh(id, x, z, hp, maxHp, dt) {
 
 export function flashEnemy(id) {
   const em = enemyMeshes.get(id);
-  if (em) { em.flashTimer = 0.15; em.scalePunch = 1; }
+  if (em) {
+    em.flashTimer = 0.15; em.scalePunch = 1;
+    if (em.isModel && em.modelMats) em.modelMats.forEach(m => { m._needsRestore = true; });
+  }
 }
 
 const dyingEnemies = [];
