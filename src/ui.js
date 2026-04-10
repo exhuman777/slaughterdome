@@ -5,8 +5,8 @@ const hudScore = document.getElementById('hud-score');
 const hpFill = document.getElementById('hp-fill');
 const comboEl = document.getElementById('combo');
 const gameover = document.getElementById('gameover');
-const goWave = document.getElementById('go-wave');
-const goScore = document.getElementById('go-score');
+const goWaveVal = document.getElementById('go-wave-val');
+const goScoreVal = document.getElementById('go-score-val');
 const goKills = document.getElementById('go-kills');
 const pingEl = document.getElementById('ping');
 
@@ -52,17 +52,18 @@ export function showHUD() {
 export function showGameOver(wave, score, players) {
   gameover.style.display = 'block'; hud.style.display = 'none';
   hideYouDied();
-  goWave.textContent = 'WAVE: ' + wave;
-  goScore.textContent = 'SCORE: ' + score;
-  // Show player names and kills
+  goWaveVal.textContent = wave;
+  goScoreVal.textContent = score;
   if (Array.isArray(players)) {
     const sorted = [...players].sort((a, b) => b.kills - a.kills);
     goKills.innerHTML = sorted.map(p =>
-      '<div class="go-player"><span class="go-name">' + (p.name || p.id) + '</span> -- <span class="go-kills">' + p.kills + ' KILLS</span>' +
-      (p.shotsFired !== undefined ? ' <span class="go-shots">' + p.shotsFired + ' SHOTS</span>' : '') + '</div>'
+      '<div class="go-player">' +
+      '<span class="go-name">' + (p.name || p.id) + '</span>' +
+      '<span><span class="go-kills">' + p.kills + ' KILLS</span>' +
+      (p.shotsFired !== undefined ? ' <span class="go-shots">' + p.shotsFired + ' shots</span>' : '') +
+      '</span></div>'
     ).join('');
   } else if (players && typeof players === 'object') {
-    // Legacy format fallback
     const killLines = Object.entries(players).map(([id, k]) => id + ': ' + k).join(' | ');
     goKills.textContent = 'KILLS: ' + killLines;
   }

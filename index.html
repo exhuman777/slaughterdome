@@ -284,14 +284,87 @@
   #hp-bar { width: 200px; height: 8px; background: #333; border-radius: 4px; overflow: hidden; }
   #hp-fill { height: 100%; background: #44ff44; transition: width 0.2s; }
   #combo { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 32px; color: #ffcc00; text-shadow: 0 0 10px #ffcc00; display: none; pointer-events: none; font-weight: 800; }
-  #gameover { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: #fff; display: none; }
-  #gameover h2 { font-size: 48px; color: #ff4444; margin-bottom: 20px; font-weight: 800; }
-  #gameover .stats { font-size: 18px; margin: 10px 0; }
-  #gameover button { background: #ff4444; color: #fff; border: none; padding: 12px 48px; font-size: 20px; font-family: inherit; cursor: pointer; margin-top: 20px; letter-spacing: 4px; font-weight: 700; }
+  /* Game Over -- full overlay */
+  #gameover {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(8,4,4,0.92);
+    display: none; z-index: 60;
+    overflow-y: auto;
+  }
+  #gameover::before {
+    content: ''; position: fixed; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 4px);
+    z-index: 0;
+  }
+  .go-inner {
+    position: relative; z-index: 1;
+    max-width: 420px; margin: 0 auto; padding: 60px 20px 40px;
+    text-align: center;
+  }
+  #gameover h2 {
+    font-family: 'Black Ops One', monospace;
+    font-size: 42px; color: #cc2222; font-weight: 400;
+    letter-spacing: 6px; margin-bottom: 6px;
+    text-shadow: 0 0 30px rgba(204,34,34,0.5), 0 0 60px rgba(204,34,34,0.2);
+    animation: titleGlow 3s ease-in-out infinite;
+  }
+  .go-subtitle {
+    font-size: 11px; color: #553333; letter-spacing: 6px;
+    text-transform: uppercase; margin-bottom: 28px;
+  }
+  .go-stats-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 2px;
+    margin-bottom: 24px; background: #1a0808;
+  }
+  .go-stat-box {
+    background: #0e0808; padding: 16px 10px; text-align: center;
+  }
+  .go-stat-val {
+    font-family: 'Orbitron', monospace; font-size: 28px; font-weight: 700;
+    color: #cc3333; text-shadow: 0 0 12px rgba(204,34,34,0.4);
+  }
+  .go-stat-label {
+    font-size: 9px; color: #5a3a3a; letter-spacing: 3px;
+    text-transform: uppercase; margin-top: 4px;
+  }
+  .go-players-section {
+    margin-bottom: 24px; text-align: left;
+  }
+  .go-players-title {
+    font-size: 9px; color: #cc3333; letter-spacing: 5px;
+    text-transform: uppercase; margin-bottom: 10px;
+    border-bottom: 1px solid #221111; padding-bottom: 6px;
+  }
+  #gameover .go-player {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 12px; border-bottom: 1px solid #1a1010;
+    margin: 0; font-size: 13px; color: #8a7a6a;
+  }
+  #gameover .go-player:nth-child(even) { background: rgba(204,34,34,0.02); }
+  #gameover .go-player .go-name { color: #c4a882; font-weight: 700; }
+  #gameover .go-player .go-kills { color: #cc3333; font-weight: 700; }
+  #gameover .go-player .go-shots { color: #5a4a3a; font-size: 11px; }
+  .go-divider {
+    height: 1px; margin: 20px 0;
+    background: linear-gradient(to right, transparent, #cc222244, transparent);
+  }
+  #gameover button {
+    background: transparent; color: #cc2222; border: 2px solid #cc2222;
+    padding: 12px 44px; font-size: 16px; font-family: 'Black Ops One', monospace;
+    cursor: pointer; letter-spacing: 5px; font-weight: 400;
+    text-shadow: 0 0 15px rgba(204,34,34,0.4);
+    box-shadow: 0 0 20px rgba(204,34,34,0.1);
+    transition: all 0.2s; display: inline-block; margin: 6px;
+  }
+  #gameover button:hover {
+    background: #cc2222; color: #fff;
+    box-shadow: 0 0 40px rgba(204,34,34,0.3);
+    text-shadow: 0 0 8px rgba(255,255,255,0.4);
+  }
   #menu-btn { position:absolute; top:10px; left:10px; background:none; border:1px solid #444; color:#888; padding:4px 12px; font-family:inherit; font-size:11px; cursor:pointer; letter-spacing:2px; z-index:10; }
   #menu-btn:hover { border-color:#e6993a; color:#e6993a; }
-  #go-menu-btn { background:none; border:1px solid #888; color:#888; padding:10px 36px; font-size:16px; font-family:inherit; cursor:pointer; margin-top:10px; letter-spacing:3px; }
-  #go-menu-btn:hover { border-color:#e6993a; color:#e6993a; }
+  #go-menu-btn { border-color: #553333; color: #553333; }
+  #go-menu-btn:hover { background: #331111; border-color: #883333; color: #cc4444; box-shadow: none; }
   #ping { position: absolute; top: 10px; right: 10px; color: #666; font-size: 12px; display: none; }
   #upgrade-shop { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); display:flex; gap:16px; z-index:50; }
   .upgrade-card { background:#1a1a1a; border:2px solid #888; border-radius:4px; padding:16px 20px; width:180px; cursor:pointer; text-align:center; font-family:inherit; transition:transform 0.1s,border-color 0.1s; }
@@ -422,13 +495,21 @@
   </div>
   <div id="combo"></div>
   <div id="gameover">
-    <h2>GAME OVER</h2>
-    <div class="stats" id="go-wave"></div>
-    <div class="stats" id="go-score"></div>
-    <div class="stats" id="go-kills"></div>
-    <button id="restart-btn">PLAY AGAIN</button>
-    <br>
-    <button id="go-menu-btn">MAIN MENU</button>
+    <div class="go-inner">
+      <h2>GAME OVER</h2>
+      <div class="go-subtitle">THE DOME CLAIMS ANOTHER</div>
+      <div class="go-stats-grid">
+        <div class="go-stat-box"><div class="go-stat-val" id="go-wave-val">0</div><div class="go-stat-label">Wave</div></div>
+        <div class="go-stat-box"><div class="go-stat-val" id="go-score-val">0</div><div class="go-stat-label">Score</div></div>
+      </div>
+      <div class="go-players-section">
+        <div class="go-players-title">Fighters</div>
+        <div id="go-kills"></div>
+      </div>
+      <div class="go-divider"></div>
+      <button id="restart-btn">PLAY AGAIN</button>
+      <button id="go-menu-btn">MAIN MENU</button>
+    </div>
   </div>
   <div id="you-died"><h3>YOU DIED</h3><div class="sub">SPECTATING</div></div>
   <div id="ping"></div>
