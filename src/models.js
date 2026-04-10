@@ -5,11 +5,11 @@ const templates = [];
 let ready = false;
 
 const mats = {
-  canopy: new THREE.MeshStandardMaterial({ color: 0x2d5a1e, roughness: 0.8 }),
-  trunk: new THREE.MeshStandardMaterial({ color: 0x5c3a1e, roughness: 0.9 }),
-  dead: new THREE.MeshStandardMaterial({ color: 0x4a3528, roughness: 0.9 }),
-  pine: new THREE.MeshStandardMaterial({ color: 0x1a4a2e, roughness: 0.8 }),
-  pineTrunk: new THREE.MeshStandardMaterial({ color: 0x3a2a18, roughness: 0.9 }),
+  canopy: new THREE.MeshStandardMaterial({ color: 0x55cc33, emissive: 0x22aa11, emissiveIntensity: 0.3, roughness: 0.6 }),
+  trunk: new THREE.MeshStandardMaterial({ color: 0x8B6914, emissive: 0x443300, emissiveIntensity: 0.15, roughness: 0.7 }),
+  dead: new THREE.MeshStandardMaterial({ color: 0x887755, emissive: 0x332211, emissiveIntensity: 0.2, roughness: 0.7 }),
+  pine: new THREE.MeshStandardMaterial({ color: 0x33aa55, emissive: 0x118833, emissiveIntensity: 0.3, roughness: 0.6 }),
+  pineTrunk: new THREE.MeshStandardMaterial({ color: 0x7a5a28, emissive: 0x332200, emissiveIntensity: 0.15, roughness: 0.7 }),
 };
 
 function load(url) {

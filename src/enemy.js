@@ -68,9 +68,12 @@ function cloneMonster(type) {
   const mats = [];
   clone.traverse(c => {
     if (c.isMesh) {
-      // Keep original glTF materials (textures, PBR) -- just clone for isolation
+      // Keep original glTF materials (textures, PBR) -- clone for isolation
       c.material = c.material.clone();
       c.material._origColor = c.material.color ? c.material.color.clone() : new THREE.Color(0xffffff);
+      // Boost brightness so monsters pop against dark arena
+      c.material.emissive = c.material.color ? c.material.color.clone() : new THREE.Color(visual.color);
+      c.material.emissiveIntensity = 0.4;
       c.frustumCulled = false;
       c.castShadow = true;
       mats.push(c.material);
