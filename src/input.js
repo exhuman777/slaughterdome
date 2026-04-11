@@ -59,6 +59,80 @@ export function resetInput() {
   mouse.right = false;
 }
 
+// Gamepad support
+const GP_DEADZONE = 0.15;
+let gpDashPrev = false;
+let gpSwordPrev = false;
+let gpWallPrev = false;
+let gpSpecialPrev = false;
+let gpDashTriggered = false;
+let gpSwordTriggered = false;
+let gpWallTriggered = false;
+let gpAimX = 0, gpAimZ = 0;
+let gpAimActive = false;
+
+function pollGamepad() {
+  const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+  let gp = null;
+  for (let i = 0; i < gamepads.length; i++) {
+    if (gamepads[i]) { gp = gamepads[i]; break; }
+  }
+  if (!gp) return { dx: 0, dz: 0, attack: false, special: false, dash: false, sword: false, wall: false };
+
+  // Left stick: movement
+  let lx = gp.axes[0] || 0;
+  let lz = gp.axes[1] || 0;
+  if (Math.abs(lx) < GP_DEADZONE) lx = 0;
+  if (Math.abs(lz) < GP_DEADZONE) lz = 0;
+  const lLen = Math.sqrt(lx * lx + lz * lz);
+  if (lLen > 1) { lx /= lLen; lz /= lLen; }
+
+  // Right stick: aim direction
+  let rx = gp.axes[2] || 0;
+  let rz = gp.axes[3] || 0;
+  if (Math.abs(rx) < GP_DEADZONE) rx = 0;
+  if (Math.abs(rz) < GP_DEADZONE) rz = 0;
+  const rLen = Math.sqrt(rx * rx + rz * rz);
+  if (rLen > GP_DEADZONE) {
+    gpAimX = rx / rLen;
+    gpAimZ = rz / rLen;
+    gpAimActive = true;
+  } else {
+    gpAimActive = false;
+  }
+
+  // RT/R2 (button 7) = attack
+  const attack = gp.buttons[7] && gp.buttons[7].pressed;
+
+  // A/Cross (button 0) = dash (edge-triggered)
+  const dashNow = gp.buttons[0] && gp.buttons[0].pressed;
+  if (dashNow && !gpDashPrev) gpDashTriggered = true;
+  gpDashPrev = dashNow;
+
+  // B/Circle (button 1) = sword (edge-triggered)
+  const swordNow = gp.buttons[1] && gp.buttons[1].pressed;
+  if (swordNow && !gpSwordPrev) gpSwordTriggered = true;
+  gpSwordPrev = swordNow;
+
+  // X/Square (button 2) = wall mode toggle (edge-triggered)
+  const wallNow = gp.buttons[2] && gp.buttons[2].pressed;
+  if (wallNow && !gpWallPrev) wallMode = !wallMode;
+  gpWallPrev = wallNow;
+
+  // Y/Triangle (button 3) = special/AoE
+  const special = gp.buttons[3] && gp.buttons[3].pressed;
+
+  return { dx: lx, dz: lz, attack, special, dash: false, sword: false, wall: false };
+}
+
+export function hasGamepad() {
+  const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+  for (let i = 0; i < gamepads.length; i++) {
+    if (gamepads[i]) return true;
+  }
+  return false;
+}
+
 export function getInput() {
   let dx = 0, dz = 0;
   if (keys['KeyW'] || keys['ArrowUp']) dz -= 1;
@@ -67,15 +141,32 @@ export function getInput() {
   if (keys['KeyD'] || keys['ArrowRight']) dx += 1;
   const len = Math.sqrt(dx * dx + dz * dz);
   if (len > 0) { dx /= len; dz /= len; }
-  const dash = dashTriggered;
+
+  // Poll gamepad and merge
+  const gp = pollGamepad();
+  if (gp.dx !== 0 || gp.dz !== 0) { dx = gp.dx; dz = gp.dz; }
+
+  const dash = dashTriggered || gpDashTriggered;
   dashTriggered = false;
+  gpDashTriggered = false;
   const wall = wallTriggeredFrames > 0;
   if (wallTriggeredFrames > 0) wallTriggeredFrames--;
-  const sword = swordTriggered;
+  const sword = swordTriggered || gpSwordTriggered;
   swordTriggered = false;
-  // In wall mode, suppress attack -- LMB places walls instead
-  const attack = wallMode ? false : (mouse.left || keys['ShiftLeft'] || keys['ShiftRight']);
-  return { dx, dz, attack, special: mouse.right, aimX: mouse.x, aimZ: mouse.z, wall, dash, sword };
+  gpSwordTriggered = false;
+  // In wall mode, suppress attack: LMB places walls instead
+  const kbAttack = wallMode ? false : (mouse.left || keys['ShiftLeft'] || keys['ShiftRight']);
+  const attack = kbAttack || (wallMode ? false : gp.attack);
+  const special = mouse.right || gp.special;
+
+  // Aim: use right stick if active, otherwise mouse
+  let aimX = mouse.x, aimZ = mouse.z;
+  if (gpAimActive) {
+    aimX = gpAimX * 20;
+    aimZ = gpAimZ * 20;
+  }
+
+  return { dx, dz, attack, special, aimX, aimZ, wall, dash, sword, mobileAimRelative: gpAimActive };
 }
 
 let touchMove = { dx: 0, dz: 0 };

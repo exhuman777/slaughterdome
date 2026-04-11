@@ -8,9 +8,10 @@ import * as THREE from 'https://esm.sh/three@0.162.0';
 import { scene } from './renderer.js';
 import { showGunShot, showSpecialAttack, showDamageNumber, showExplosion, showHitImpact, updateCombatVisuals, showSwordSlash } from './combat.js';
 import { playHit, playKill, playExplosion, playWaveStart, playBossSpawn, playPickup, playDeath, playCombo, resumeAudio, playShot, playWallPlace, playDash, playWallDestroy, playWaveClear, playSword } from './audio.js';
-import { getInput, getMobileInput, isMobile, setupMobileControls, isWallMode, exitWallMode, resetInput } from './input.js';
+import { getInput, getMobileInput, isMobile, setupMobileControls, isWallMode, exitWallMode, resetInput, hasGamepad } from './input.js';
 import { connect, sendInput, sendPing, getState, getMyId, getPing, drainEvents, disconnect } from './network.js';
-import { showTitle, showHUD, showGameOver, updateHUD, showCombo, updatePing, getPlayerName, updateUpgradeDisplay, updateWeaponHUD, showControlsHint, hideControlsHint, updateCountdown, updateAbilities, updateInfo, updatePlayers, showYouDied, hideYouDied, updateWallMode, showGameTip, showArenaWarn, updateFlagHUD } from './ui.js';
+import { showTitle, showHUD, showGameOver, updateHUD, showCombo, updatePing, getPlayerName, updateUpgradeDisplay, updateWeaponHUD, showControlsHint, hideControlsHint, updateCountdown, updateAbilities, updateInfo, updatePlayers, showYouDied, hideYouDied, updateWallMode, showGameTip, showArenaWarn, updateFlagHUD, showPartySetup, hidePartySetup, getPartyNames, addPartyPlayer, showTurnReady, hideTurnReady, showPartyRoundHUD, hidePartyRoundHUD, showPodium, hidePodium } from './ui.js';
+import { initParty, isPartyMode, getPartyState, startTurn, endTurn, getPartyHUD, getResults, resetParty } from './party.js';
 import { showUpgradeShop, hideUpgradeShop } from './upgrades.js';
 import { loadModels, modelsReady, cloneTree } from './models.js';
 import { loadDecorations, buildArenaDecorations, clearDecorations } from './decorations.js';
@@ -330,6 +331,44 @@ document.getElementById('restart-btn').addEventListener('click', startGame);
 document.getElementById('menu-btn').addEventListener('click', quitToMenu);
 document.getElementById('go-menu-btn').addEventListener('click', quitToMenu);
 
+// Party mode buttons
+document.getElementById('party-btn').addEventListener('click', () => { showPartySetup(); });
+document.getElementById('party-add-btn').addEventListener('click', () => { addPartyPlayer(); });
+document.getElementById('party-back-btn').addEventListener('click', () => { hidePartySetup(); showTitle(); });
+document.getElementById('party-start-btn').addEventListener('click', () => {
+  const names = getPartyNames();
+  if (names.length < 2) return;
+  initParty(names);
+  hidePartySetup();
+  showPartyTurnReady();
+});
+document.getElementById('turn-prompt').addEventListener('click', () => {
+  startPartyTurn();
+});
+document.getElementById('podium-menu-btn').addEventListener('click', () => {
+  resetParty();
+  hidePodium();
+  showTitle();
+});
+
+function showPartyTurnReady() {
+  const hud = getPartyHUD();
+  if (!hud) return;
+  showTurnReady(hud.playerName, hud.playerColor, hud.round, hud.totalRounds);
+}
+
+async function startPartyTurn() {
+  hideTurnReady();
+  startTurn();
+  const hud = getPartyHUD();
+  if (hud) {
+    // Set the name input to party player name
+    document.getElementById('name-input').value = hud.playerName;
+    showPartyRoundHUD(hud.round, hud.totalRounds, hud.playerName, hud.playerColor);
+  }
+  await startGame();
+}
+
 // ESC during gameplay = quit to menu (only when NOT in wall mode)
 document.addEventListener('keydown', e => {
   if (e.code === 'Escape' && gameActive && !isWallMode()) quitToMenu();
@@ -362,6 +401,10 @@ function quitToMenu() {
   obstacleMeshes.clear();
   cachedObstacles = [];
   clearDecorations();
+  resetParty();
+  hidePartyRoundHUD();
+  hideTurnReady();
+  hidePodium();
   showTitle();
 }
 
@@ -932,7 +975,7 @@ function handleEvent(ev) {
       hideUpgradeShop();
       playWaveStart();
       const waveNum2 = getState()?.wave || 1;
-      if (waveNum2 === 1) showGameTip('[E] BUILD WALLS -- block enemies and control the arena!', 8000);
+      if (waveNum2 === 1) showGameTip('[E] BUILD WALLS to block enemies and control the arena!', 8000);
       else if (waveNum2 === 2) showGameTip('WALLS block enemy movement and projectiles!', 6000);
       else if (waveNum2 === 3) showGameTip('DASH through enemies for NEAR MISS bonus!', 5000);
       if (waveNum2 >= 2) showArenaWarn(2500);
@@ -1001,10 +1044,21 @@ function handleEvent(ev) {
       resetInput();
       updateWallMode(false);
       ghostWall.visible = false;
+      hidePartyRoundHUD();
       for (const c of corpses) { scene.remove(c); c.material.dispose(); }
       corpses.length = 0;
-      showGameOver(ev.wave, ev.score, ev.players || ev.kills);
       playDeath();
+      if (isPartyMode()) {
+        endTurn(ev.wave, ev.score);
+        const ps = getPartyState();
+        if (ps && ps.phase === 'PODIUM') {
+          showPodium(getResults());
+        } else {
+          showPartyTurnReady();
+        }
+      } else {
+        showGameOver(ev.wave, ev.score, ev.players || ev.kills);
+      }
       break;
   }
 }

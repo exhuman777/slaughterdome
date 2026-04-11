@@ -25,6 +25,10 @@ export function showTitle() {
   if (pingEl) pingEl.style.display = 'none';
   if (weaponEl) weaponEl.style.display = 'none';
   if (upgradeStrip) upgradeStrip.style.display = 'none';
+  if (partySetupEl) partySetupEl.style.display = 'none';
+  if (partyTurnEl) partyTurnEl.style.display = 'none';
+  if (partyRoundEl) partyRoundEl.style.display = 'none';
+  if (partyPodiumEl) partyPodiumEl.style.display = 'none';
   fetchLeaderboard();
 }
 
@@ -55,6 +59,9 @@ function fetchLeaderboard() {
 
 export function showHUD() {
   title.style.display = 'none'; hud.style.display = 'block'; gameover.style.display = 'none'; pingEl.style.display = 'block';
+  if (partySetupEl) partySetupEl.style.display = 'none';
+  if (partyTurnEl) partyTurnEl.style.display = 'none';
+  if (partyPodiumEl) partyPodiumEl.style.display = 'none';
   showAbilities(); showInfo();
 }
 
@@ -169,7 +176,7 @@ export function updateCountdown(phase, timerMs) {
   if (!countdownEl) return;
   if (phase === 'countdown' && timerMs > 0) {
     const secs = Math.ceil(timerMs / 1000);
-    countdownEl.textContent = 'NEXT WAVE IN ' + secs + ' -- ARENA SHRINKS';
+    countdownEl.textContent = 'NEXT WAVE IN ' + secs + ' | ARENA SHRINKS';
     countdownEl.style.display = 'block';
   } else {
     countdownEl.style.display = 'none';
@@ -223,7 +230,7 @@ export function updateFlagHUD(showFlag, carrying) {
   if (!showFlag) { flagHudEl.style.display = 'none'; return; }
   flagHudEl.style.display = 'block';
   if (carrying) {
-    flagHudEl.textContent = 'CARRYING FLAG -- DELIVER IT';
+    flagHudEl.textContent = 'CARRYING FLAG | DELIVER IT';
     flagHudEl.className = 'carrying';
   } else {
     flagHudEl.textContent = 'CAPTURE THE FLAG';
@@ -263,4 +270,148 @@ export function updatePlayers(count) {
   } else {
     playersEl.style.display = 'none';
   }
+}
+
+// ====== PARTY MODE UI ======
+const PARTY_COLORS = ['#ee4444', '#44aaff', '#44dd44', '#ffaa44'];
+const partySetupEl = document.getElementById('party-setup');
+const partyPlayersEl = document.getElementById('party-players');
+const partyTurnEl = document.getElementById('party-turn');
+const partyRoundEl = document.getElementById('party-round');
+const partyPodiumEl = document.getElementById('party-podium');
+
+let partyNames = [];
+
+function hideAllParty() {
+  if (partySetupEl) partySetupEl.style.display = 'none';
+  if (partyTurnEl) partyTurnEl.style.display = 'none';
+  if (partyRoundEl) partyRoundEl.style.display = 'none';
+  if (partyPodiumEl) partyPodiumEl.style.display = 'none';
+}
+
+function renderPartyPlayers() {
+  if (!partyPlayersEl) return;
+  partyPlayersEl.innerHTML = partyNames.map((name, i) =>
+    '<div class="party-player-row">' +
+    '<div class="party-color-dot" style="background:' + PARTY_COLORS[i] + '"></div>' +
+    '<input type="text" value="' + name + '" maxlength="12" placeholder="Player ' + (i + 1) + '" data-idx="' + i + '">' +
+    (partyNames.length > 2 ? '<button class="party-remove-btn" data-idx="' + i + '">X</button>' : '') +
+    '</div>'
+  ).join('');
+  // Bind events
+  partyPlayersEl.querySelectorAll('input').forEach(inp => {
+    inp.addEventListener('input', e => {
+      partyNames[parseInt(e.target.dataset.idx)] = e.target.value;
+    });
+  });
+  partyPlayersEl.querySelectorAll('.party-remove-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      partyNames.splice(parseInt(e.target.dataset.idx), 1);
+      renderPartyPlayers();
+    });
+  });
+}
+
+export function showPartySetup() {
+  hideAllParty();
+  title.style.display = 'none';
+  gameover.style.display = 'none';
+  partyNames = ['', ''];
+  renderPartyPlayers();
+  if (partySetupEl) partySetupEl.style.display = 'block';
+}
+
+export function hidePartySetup() {
+  if (partySetupEl) partySetupEl.style.display = 'none';
+}
+
+export function getPartyNames() {
+  return partyNames.map((n, i) => n.trim() || ('Player ' + (i + 1)));
+}
+
+export function addPartyPlayer() {
+  if (partyNames.length < 4) {
+    partyNames.push('');
+    renderPartyPlayers();
+  }
+}
+
+export function showTurnReady(playerName, playerColor, round, totalRounds) {
+  hideAllParty();
+  if (!partyTurnEl) return;
+  const nameEl = document.getElementById('turn-player-name');
+  const roundEl = document.getElementById('turn-round-info');
+  if (nameEl) { nameEl.textContent = playerName; nameEl.style.color = playerColor; }
+  if (roundEl) roundEl.textContent = 'ROUND ' + round + ' / ' + totalRounds;
+  partyTurnEl.style.display = 'flex';
+  gameover.style.display = 'none';
+  title.style.display = 'none';
+}
+
+export function hideTurnReady() {
+  if (partyTurnEl) partyTurnEl.style.display = 'none';
+}
+
+export function showPartyRoundHUD(round, totalRounds, playerName, playerColor) {
+  if (!partyRoundEl) return;
+  partyRoundEl.innerHTML = 'ROUND ' + round + '/' + totalRounds + ' <span style="color:' + playerColor + '">' + playerName + '</span>';
+  partyRoundEl.style.display = 'block';
+}
+
+export function hidePartyRoundHUD() {
+  if (partyRoundEl) partyRoundEl.style.display = 'none';
+}
+
+export function showPodium(results) {
+  hideAllParty();
+  title.style.display = 'none';
+  hud.style.display = 'none';
+  gameover.style.display = 'none';
+  hideAbilities(); hideInfo(); hidePlayers();
+  if (countdownEl) countdownEl.style.display = 'none';
+  if (arenaWarnEl) arenaWarnEl.style.display = 'none';
+  if (gameTipEl) gameTipEl.style.display = 'none';
+  if (flagHudEl) flagHudEl.style.display = 'none';
+  if (wallModeEl) wallModeEl.style.display = 'none';
+  if (wallHintEl) wallHintEl.style.display = 'none';
+
+  if (!partyPodiumEl) return;
+
+  // Build podium columns (1st center, 2nd left, 3rd right)
+  const placesEl = document.getElementById('podium-places');
+  const detailsEl = document.getElementById('podium-details');
+  const heights = [140, 100, 70, 50];
+  const order = results.length >= 3 ? [1, 0, 2] : [0, 1]; // visual order: 2nd, 1st, 3rd
+
+  let placesHTML = '';
+  for (const idx of order) {
+    if (idx >= results.length) continue;
+    const r = results[idx];
+    const h = heights[idx];
+    placesHTML += '<div class="podium-col">' +
+      '<div class="podium-name" style="color:' + r.color + '">' + r.name + '</div>' +
+      '<div class="podium-score" style="color:' + r.color + '">' + r.totalScore + '</div>' +
+      '<div class="podium-block" style="height:' + h + 'px;background:' + r.color + '">#' + (idx + 1) + '</div>' +
+      '</div>';
+  }
+  if (placesEl) placesEl.innerHTML = placesHTML;
+
+  // Details table
+  let detHTML = '';
+  results.forEach((r, i) => {
+    const roundScores = r.scores.map((s, j) => 'R' + (j + 1) + ':' + s).join(' ');
+    detHTML += '<div class="podium-row">' +
+      '<span class="podium-rank" style="color:' + r.color + '">#' + (i + 1) + '</span>' +
+      '<span class="podium-pname" style="color:' + r.color + '">' + r.name + '</span>' +
+      '<span class="podium-pstat">W' + r.bestWave + ' best | ' + roundScores + '</span>' +
+      '<span class="podium-ptotal" style="color:' + r.color + '">' + r.totalScore + '</span>' +
+      '</div>';
+  });
+  if (detailsEl) detailsEl.innerHTML = detHTML;
+
+  partyPodiumEl.style.display = 'block';
+}
+
+export function hidePodium() {
+  if (partyPodiumEl) partyPodiumEl.style.display = 'none';
 }

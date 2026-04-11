@@ -63,9 +63,18 @@
     padding: 0 40px 40px; max-width: 800px;
   }
   .hero-year {
-    font-family: 'JetBrains Mono', monospace; font-size: 20px;
-    color: #cc4444; letter-spacing: 8px; margin-bottom: 8px;
-    animation: flicker 3s ease-in-out infinite;
+    font-family: 'Orbitron', monospace; font-size: 36px; font-weight: 700;
+    color: #cc4444; letter-spacing: 12px; margin-bottom: 8px;
+    text-shadow: 0 0 20px rgba(204,34,34,0.8), 0 0 40px rgba(204,34,34,0.4);
+    animation: yearBlink 1.5s ease-in-out infinite;
+  }
+  @keyframes yearBlink {
+    0%, 100% { opacity: 1; text-shadow: 0 0 20px rgba(204,34,34,0.8), 0 0 40px rgba(204,34,34,0.4); }
+    30% { opacity: 1; text-shadow: 0 0 30px rgba(255,50,50,1), 0 0 60px rgba(204,34,34,0.6); }
+    50% { opacity: 0.3; text-shadow: 0 0 5px rgba(204,34,34,0.3); }
+    55% { opacity: 1; text-shadow: 0 0 40px rgba(255,50,50,1), 0 0 80px rgba(204,34,34,0.8); }
+    70% { opacity: 0.6; }
+    75% { opacity: 1; }
   }
   .hero h1 {
     font-family: 'Black Ops One', 'Alfa Slab One', cursive;
@@ -423,6 +432,140 @@
   #gameover .go-player { margin:6px 0; font-size:16px; color:#c4a882; }
   #gameover .go-player .go-name { color:#e6993a; font-weight:700; }
   #gameover .go-player .go-kills { color:#fff; }
+
+  /* ====== PARTY MODE ====== */
+  #party-btn:hover { background:#e6993a !important; color:#0a0808 !important; box-shadow:0 0 50px rgba(230,153,58,0.4),inset 0 0 30px rgba(255,179,71,0.1) !important; }
+
+  #party-setup {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    background:#0a0808; color:#c4a882; display:none; z-index:50;
+    overflow-y:auto;
+  }
+  .party-inner {
+    max-width:500px; margin:0 auto; padding:60px 20px 40px; text-align:center;
+  }
+  .party-inner h2 {
+    font-family:'Black Ops One',monospace; font-size:36px; color:#e6993a;
+    letter-spacing:6px; margin-bottom:6px;
+    text-shadow:0 0 30px rgba(230,153,58,0.5);
+  }
+  .party-subtitle {
+    font-size:11px; color:#5a4a3a; letter-spacing:5px; margin-bottom:28px;
+  }
+  .party-player-row {
+    display:flex; align-items:center; gap:10px; margin-bottom:10px;
+  }
+  .party-color-dot {
+    width:20px; height:20px; border-radius:50%; flex-shrink:0;
+  }
+  .party-player-row input {
+    flex:1; background:rgba(230,153,58,0.04); border:1px solid #3a2a1a; color:#e6993a;
+    padding:10px 14px; font-size:16px; font-family:inherit; outline:none; letter-spacing:2px;
+  }
+  .party-player-row input:focus { border-color:#e6993a; box-shadow:0 0 15px rgba(230,153,58,0.15); }
+  .party-player-row input::placeholder { color:#3a2a1a; }
+  .party-remove-btn {
+    background:none; border:1px solid #331111; color:#553333; width:32px; height:32px;
+    font-size:18px; cursor:pointer; font-family:monospace; flex-shrink:0;
+  }
+  .party-remove-btn:hover { border-color:#883333; color:#cc4444; }
+  #party-add-btn {
+    background:none; border:1px dashed #3a2a1a; color:#5a4a3a; padding:10px; width:100%;
+    font-size:14px; font-family:inherit; cursor:pointer; letter-spacing:2px; margin-bottom:24px;
+  }
+  #party-add-btn:hover { border-color:#e6993a; color:#e6993a; }
+  #party-start-btn {
+    background:transparent; color:#e6993a; border:2px solid #e6993a;
+    padding:14px 48px; font-size:20px; font-family:'Black Ops One',monospace;
+    cursor:pointer; letter-spacing:6px;
+    text-shadow:0 0 15px rgba(230,153,58,0.4);
+    box-shadow:0 0 20px rgba(230,153,58,0.1);
+    transition:all 0.2s;
+  }
+  #party-start-btn:hover { background:#e6993a; color:#0a0808; }
+  #party-back-btn {
+    background:none; border:1px solid #3a2a1a; color:#5a4a3a; padding:8px 24px;
+    font-size:12px; font-family:inherit; cursor:pointer; letter-spacing:3px; margin-top:16px;
+  }
+  #party-back-btn:hover { border-color:#883333; color:#cc4444; }
+
+  /* Turn ready overlay */
+  #party-turn {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    background:rgba(8,4,4,0.95); display:none; z-index:55;
+    justify-content:center; align-items:center; flex-direction:column; text-align:center;
+  }
+  #party-turn h2 {
+    font-family:'Black Ops One',monospace; font-size:42px; letter-spacing:6px; margin-bottom:8px;
+  }
+  .turn-round {
+    font-size:14px; color:#5a4a3a; letter-spacing:4px; margin-bottom:24px;
+  }
+  .turn-prompt {
+    font-size:16px; color:#888; letter-spacing:3px;
+    animation:btnPulse 2s ease-in-out infinite;
+    cursor:pointer;
+  }
+
+  /* Party round HUD */
+  #party-round {
+    position:absolute; top:36px; left:50%; transform:translateX(-50%);
+    font-size:12px; letter-spacing:3px; display:none; z-index:20;
+    padding:4px 16px; background:rgba(0,0,0,0.5); border:1px solid rgba(230,153,58,0.3);
+  }
+
+  /* Podium screen */
+  #party-podium {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    background:#0a0808; display:none; z-index:60; overflow-y:auto;
+  }
+  .podium-inner {
+    max-width:600px; margin:0 auto; padding:50px 20px 40px; text-align:center;
+  }
+  .podium-inner h2 {
+    font-family:'Black Ops One',monospace; font-size:42px; color:#e6993a;
+    letter-spacing:8px; margin-bottom:6px;
+    text-shadow:0 0 30px rgba(230,153,58,0.5), 0 0 60px rgba(230,153,58,0.2);
+  }
+  .podium-subtitle {
+    font-size:11px; color:#5a4a3a; letter-spacing:5px; margin-bottom:32px;
+  }
+  .podium-places {
+    display:flex; justify-content:center; align-items:flex-end; gap:4px; margin-bottom:32px; height:200px;
+  }
+  .podium-col {
+    display:flex; flex-direction:column; align-items:center; justify-content:flex-end;
+  }
+  .podium-name {
+    font-size:14px; font-weight:700; letter-spacing:2px; margin-bottom:6px;
+  }
+  .podium-score {
+    font-family:'Orbitron',monospace; font-size:20px; font-weight:700; margin-bottom:8px;
+  }
+  .podium-block {
+    width:120px; display:flex; align-items:center; justify-content:center;
+    font-family:'Orbitron',monospace; font-size:28px; font-weight:700; color:#0a0808;
+  }
+  .podium-details {
+    text-align:left; margin-bottom:28px;
+  }
+  .podium-row {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:10px 14px; border-bottom:1px solid #1a1210; font-size:14px;
+  }
+  .podium-row:nth-child(even) { background:rgba(230,153,58,0.02); }
+  .podium-rank { width:30px; font-weight:700; }
+  .podium-pname { flex:1; font-weight:700; }
+  .podium-pstat { color:#8a7a6a; font-size:12px; letter-spacing:1px; }
+  .podium-ptotal { font-family:'Orbitron',monospace; font-weight:700; width:80px; text-align:right; }
+  #podium-menu-btn {
+    background:transparent; color:#e6993a; border:2px solid #e6993a;
+    padding:14px 48px; font-size:18px; font-family:'Black Ops One',monospace;
+    cursor:pointer; letter-spacing:6px;
+    text-shadow:0 0 15px rgba(230,153,58,0.4);
+    transition:all 0.2s;
+  }
+  #podium-menu-btn:hover { background:#e6993a; color:#0a0808; }
 </style>
 </head>
 <body>
@@ -441,7 +584,8 @@
     <div class="landing-body">
 
       <div class="section-divider"></div>
-      <div class="feature-grid">
+      <div class="feature-grid" style="grid-template-columns: repeat(5, 1fr);">
+        <div class="feature-box"><div class="f-val">2P</div><div class="f-label">Co-op</div></div>
         <div class="feature-box"><div class="f-val">3</div><div class="f-label">Weapons</div></div>
         <div class="feature-box"><div class="f-val">16</div><div class="f-label">Upgrades</div></div>
         <div class="feature-box"><div class="f-val">8</div><div class="f-label">Enemy Types</div></div>
@@ -452,9 +596,9 @@
       <div class="section-label">The Dome</div>
       <div class="lore-block">
         <p>Three forces shape every fight in the Dome:</p>
-        <p><span class="red">THE SHRINKING ARENA</span> -- The Dome contracts after every wave, forcing fighters into tighter quarters. Toxic water pools spawn from wave 5, cutting off escape routes. Stand outside the ring and the Dome bleeds you dry.</p>
-        <p><span class="red">WALL BUILDING</span> -- Place walls to block enemy charges, funnel hordes into kill zones, and create choke points. Walls absorb damage and vanish when destroyed -- use them wisely. Up to 8 walls at a time.</p>
-        <p><span class="red">CAPTURE THE FLAG</span> -- Each wave spawns a flag somewhere in the arena. Pick it up, then deliver it to the drop zone to clear the wave. Deliver while enemies are still alive for bonus points. The flag drops if you die -- your partner can pick it up.</p>
+        <p><span class="red">THE SHRINKING ARENA</span> The Dome contracts after every wave, forcing fighters into tighter quarters. Toxic water pools spawn from wave 5, cutting off escape routes. Stand outside the ring and the Dome bleeds you dry.</p>
+        <p><span class="red">WALL BUILDING</span> Place walls to block enemy charges, funnel hordes into kill zones, and create choke points. Walls absorb damage and vanish when destroyed, so use them wisely. Up to 8 walls at a time.</p>
+        <p><span class="red">CAPTURE THE FLAG</span> Each wave spawns a flag somewhere in the arena. Pick it up, then deliver it to the drop zone to clear the wave. Deliver while enemies are still alive for bonus points. The flag drops if you die, but your partner can pick it up.</p>
       </div>
 
       <div class="action-banner">
@@ -467,7 +611,7 @@
         <div class="hero-tagline">BUILD. CAPTURE. SURVIVE.</div>
         <div class="hero-lore">
           The old world burned in the Collapse. What rose from the ash wasn't civilization. It was <strong>spectacle</strong>.
-          You are a condemned fighter. Build walls to hold back the horde, capture the flag to prove your worth, and survive the shrinking Dome -- or die for the crowd's entertainment.
+          Grab a friend and fight together. You are condemned fighters. Build walls to hold back the horde, capture the flag to prove your worth, and survive the shrinking Dome... or die for the crowd's entertainment.
         </div>
       </div>
 
@@ -477,17 +621,17 @@
         <div class="ctrl-group">
           <div class="ctrl-group-title">MOVEMENT</div>
           <div class="ctrl-row-lg"><span class="ctrl-key-lg">WASD</span><span class="ctrl-desc-lg">Move</span></div>
-          <div class="ctrl-row-lg"><span class="ctrl-key-lg">SPACE</span><span class="ctrl-desc-lg">Dash -- 3 charges, chain within 0.3s, i-frames</span></div>
+          <div class="ctrl-row-lg"><span class="ctrl-key-lg">SPACE</span><span class="ctrl-desc-lg">Dash with 3 charges, chain within 0.3s, i-frames</span></div>
         </div>
         <div class="ctrl-group">
           <div class="ctrl-group-title">COMBAT</div>
-          <div class="ctrl-row-lg"><span class="ctrl-key-lg">LMB / SHIFT</span><span class="ctrl-desc-lg">Shoot -- hold to fire, weapon overheats</span></div>
-          <div class="ctrl-row-lg"><span class="ctrl-key-lg">RMB</span><span class="ctrl-desc-lg">Shockwave -- AoE knockback blast</span></div>
-          <div class="ctrl-row-lg"><span class="ctrl-key-lg">Q</span><span class="ctrl-desc-lg">Sword -- 3-hit melee combo</span></div>
+          <div class="ctrl-row-lg"><span class="ctrl-key-lg">LMB / SHIFT</span><span class="ctrl-desc-lg">Shoot. Hold to fire, weapon overheats</span></div>
+          <div class="ctrl-row-lg"><span class="ctrl-key-lg">RMB</span><span class="ctrl-desc-lg">Shockwave. AoE knockback blast</span></div>
+          <div class="ctrl-row-lg"><span class="ctrl-key-lg">Q</span><span class="ctrl-desc-lg">Sword. 3-hit melee combo</span></div>
         </div>
         <div class="ctrl-group">
           <div class="ctrl-group-title">TACTICS</div>
-          <div class="ctrl-row-lg"><span class="ctrl-key-lg">E</span><span class="ctrl-desc-lg">Wall mode -- place walls to block enemies and create choke points</span></div>
+          <div class="ctrl-row-lg"><span class="ctrl-key-lg">E</span><span class="ctrl-desc-lg">Wall mode. Place walls to block enemies and create choke points</span></div>
           <div class="ctrl-row-lg"><span class="ctrl-key-lg">FLAG</span><span class="ctrl-desc-lg">Walk near the flag to pick up, deliver to the drop zone to clear wave</span></div>
           <div class="ctrl-row-lg"><span class="ctrl-key-lg">1 2 3</span><span class="ctrl-desc-lg">Pick upgrade between waves</span></div>
         </div>
@@ -511,6 +655,7 @@
         <input id="name-input" type="text" placeholder="Enter name..." maxlength="12" autocomplete="off">
         <br>
         <button id="play-btn">ENTER THE DOME</button>
+        <button id="party-btn" style="background:transparent;color:#e6993a;border:2px solid #e6993a;padding:18px 48px;font-size:24px;font-family:'Black Ops One',monospace;cursor:pointer;letter-spacing:6px;text-shadow:0 0 20px rgba(230,153,58,0.5);box-shadow:0 0 30px rgba(230,153,58,0.1),inset 0 0 30px rgba(230,153,58,0.05);transition:all 0.2s;margin-left:12px;">PARTY MODE</button>
       </div>
       <div class="footer-note">Built by exHuman // AI Game Jam 2026</div>
     </div>
@@ -541,20 +686,47 @@
       <button id="go-menu-btn">MAIN MENU</button>
     </div>
   </div>
+  <!-- Party Mode Screens -->
+  <div id="party-setup">
+    <div class="party-inner">
+      <h2>PARTY MODE</h2>
+      <div class="party-subtitle">UP TO 4 PLAYERS / 3 ROUNDS EACH</div>
+      <div id="party-players"></div>
+      <button id="party-add-btn">+ ADD PLAYER</button>
+      <button id="party-start-btn">START PARTY</button>
+      <br>
+      <button id="party-back-btn">BACK</button>
+    </div>
+  </div>
+  <div id="party-turn" style="display:none;">
+    <h2 id="turn-player-name"></h2>
+    <div class="turn-round" id="turn-round-info"></div>
+    <div class="turn-prompt" id="turn-prompt">CLICK TO START</div>
+  </div>
+  <div id="party-round" style="display:none;"></div>
+  <div id="party-podium">
+    <div class="podium-inner">
+      <h2>FINAL STANDINGS</h2>
+      <div class="podium-subtitle">THE DOME HAS SPOKEN</div>
+      <div class="podium-places" id="podium-places"></div>
+      <div class="podium-details" id="podium-details"></div>
+      <button id="podium-menu-btn">BACK TO MENU</button>
+    </div>
+  </div>
   <div id="you-died"><h3>YOU DIED</h3><div class="sub">SPECTATING</div></div>
   <div id="ping"></div>
   <div id="hud-weapon" style="display:none;"><div id="weapon-name">PISTOL</div><div id="ammo-bar"><div id="ammo-fill" style="width:0%"></div></div><div id="ammo-text">READY</div></div>
   <div id="hud-abilities" style="display:none;"></div>
   <div id="hud-info" style="display:none;"></div>
   <div id="hud-players" style="display:none;"></div>
-  <div id="hud-wallmode">-- WALL MODE --</div>
-  <div id="wall-hint">LMB to place -- RMB or E to exit</div>
+  <div id="hud-wallmode">WALL MODE</div>
+  <div id="wall-hint">LMB to place | RMB or E to exit</div>
   <div id="flag-hud"></div>
   <div id="flag-arrow" class="offscreen-arrow"><span class="arrow-label" style="color:#e6993a;">FLAG</span></div>
   <div id="delivery-arrow" class="offscreen-arrow delivery"><span class="arrow-label" style="color:#ffcc44;">DELIVER</span></div>
   <div id="game-tip"></div>
   <div id="arena-warn">ARENA SHRINKING</div>
-  <div id="hud-controls" style="display:none;">WASD move | LMB/SHIFT shoot | Q sword | RMB AoE | E wall | SPACE dash</div>
+  <div id="hud-controls" style="display:none;">WASD move | LMB shoot | Q sword | RMB AoE | E wall | SPACE dash</div>
   <div id="hud-countdown"></div>
   <div id="upgrade-shop" style="display:none;"></div>
   <div id="upgrade-strip"></div>
