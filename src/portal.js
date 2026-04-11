@@ -74,7 +74,7 @@ function createPortalMesh(color, label) {
   const ctx = canvas.getContext('2d');
   ctx.font = 'bold 32px monospace';
   ctx.textAlign = 'center';
-  ctx.fillStyle = '#e6993a';
+  ctx.fillStyle = '#' + color.toString(16).padStart(6, '0');
   ctx.fillText(label, 256, 44);
   const tex = new THREE.CanvasTexture(canvas);
   const spriteMat = new THREE.SpriteMaterial({ map: tex, transparent: true });
@@ -93,7 +93,7 @@ export function createExitPortal() {
   const dist = 30;
   const x = Math.cos(angle) * dist;
   const z = Math.sin(angle) * dist;
-  exitPortalGroup = createPortalMesh(0xe6993a, 'VIBE JAM PORTAL');
+  exitPortalGroup = createPortalMesh(0x33dd55, 'VIBE JAM PORTAL');
   exitPortalGroup.position.set(x, PORTAL_RADIUS, z);
   exitPortalGroup.lookAt(0, PORTAL_RADIUS, 0);
   exitRedirected = false;

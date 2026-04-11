@@ -17,18 +17,18 @@ export async function initRenderer() {
 
   renderer = new THREE.WebGPURenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.8;
+  renderer.toneMappingExposure = 2.2;
   await renderer.init();
   document.body.insertBefore(renderer.domElement, document.getElementById('ui'));
 
-  scene.add(new THREE.AmbientLight(0xccccdd, 1.0));
+  scene.add(new THREE.AmbientLight(0xccccdd, 1.4));
 
-  const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+  const sun = new THREE.DirectionalLight(0xffffff, 1.6);
   sun.position.set(20, 40, 20);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(512, 512);
+  sun.shadow.mapSize.set(1024, 1024);
   sun.shadow.camera.near = 1;
   sun.shadow.camera.far = 100;
   sun.shadow.camera.left = -50;
