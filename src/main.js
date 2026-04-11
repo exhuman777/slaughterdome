@@ -38,7 +38,7 @@ try {
 }
 if (!isPortalEntry) {
   showTitle();
-  try { await initDomeScene(); } catch (e) { console.error('Dome scene failed:', e); }
+  initDomeScene().catch(() => {});
 }
 
 let gameActive = false;
