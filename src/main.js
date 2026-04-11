@@ -74,6 +74,66 @@ let deliveryMesh = null;
 let flagAnimTime = 0;
 let flagTemplate = null;
 
+// Off-screen indicator arrows
+const flagArrowEl = document.getElementById('flag-arrow');
+const deliveryArrowEl = document.getElementById('delivery-arrow');
+
+function updateOffscreenIndicators(state, myId) {
+  if (!flagArrowEl || !deliveryArrowEl) return;
+  if (!state || !state.flag || state.flagDelivered) {
+    flagArrowEl.style.display = 'none';
+    deliveryArrowEl.style.display = 'none';
+    return;
+  }
+  const carrying = state.flag.carriedBy === myId;
+  // Flag arrow: show when flag is free (not carried by anyone)
+  if (!state.flag.carriedBy && flagGroup) {
+    positionArrow(flagArrowEl, flagGroup.position.x, flagGroup.position.z);
+  } else {
+    flagArrowEl.style.display = 'none';
+  }
+  // Delivery arrow: show when local player is carrying
+  if (carrying && deliveryMesh && deliveryMesh.visible) {
+    positionArrow(deliveryArrowEl, deliveryMesh.position.x, deliveryMesh.position.z);
+  } else {
+    deliveryArrowEl.style.display = 'none';
+  }
+}
+
+function positionArrow(el, worldX, worldZ) {
+  const v = new THREE.Vector3(worldX, 0.5, worldZ);
+  v.project(camera);
+  const hw = window.innerWidth / 2;
+  const hh = window.innerHeight / 2;
+  const sx = v.x * hw + hw;
+  const sy = -v.y * hh + hh;
+  // If on-screen (with margin), hide
+  const margin = 60;
+  if (sx > margin && sx < window.innerWidth - margin && sy > margin && sy < window.innerHeight - margin && v.z < 1) {
+    el.style.display = 'none';
+    return;
+  }
+  el.style.display = 'block';
+  // Calculate angle from screen center to target
+  const cx = window.innerWidth / 2;
+  const cy = window.innerHeight / 2;
+  const angle = Math.atan2(sy - cy, sx - cx);
+  // Place on screen edge
+  const edgePad = 40;
+  const maxX = window.innerWidth - edgePad;
+  const maxY = window.innerHeight - edgePad;
+  let ex = cx + Math.cos(angle) * maxX;
+  let ey = cy + Math.sin(angle) * maxY;
+  // Clamp to screen bounds
+  ex = Math.max(edgePad, Math.min(maxX, ex));
+  ey = Math.max(edgePad, Math.min(maxY, ey));
+  el.style.left = ex + 'px';
+  el.style.top = ey + 'px';
+  // Rotate arrow to point toward target
+  const arrowAngle = angle - Math.PI / 2; // CSS triangle points up by default
+  el.style.transform = 'translate(-50%, -50%) rotate(' + (arrowAngle * 180 / Math.PI) + 'deg)';
+}
+
 // Load flag OBJ model
 async function loadFlagModel() {
   try {
@@ -559,8 +619,10 @@ function gameLoop() {
   if (state && myId) {
     const me = state.players.find(p => p.id === myId);
     if (me) updateCamera(hasPrediction ? predictedX : me.pos[0], hasPrediction ? predictedZ : me.pos[2], lastInput.aimX, lastInput.aimZ);
+    updateOffscreenIndicators(state, myId);
   } else {
     updateCamera(0, 0);
+    updateOffscreenIndicators(null, null);
   }
 
   render();
@@ -711,9 +773,30 @@ function processState(state, dt) {
     if (!deliveryMesh) { deliveryMesh = createDeliveryMesh(); scene.add(deliveryMesh); }
     deliveryMesh.position.set(state.delivery.x, 0, state.delivery.z);
     deliveryMesh.visible = true;
-    const pulse = 0.5 + Math.sin(Date.now() * 0.003) * 0.3;
+    // Intensify delivery zone when carrying flag and approaching
+    const carrying = state.flag.carriedBy === myId;
+    let intensity = 0;
+    if (carrying && hasPrediction) {
+      const ddx = state.delivery.x - predictedX;
+      const ddz = state.delivery.z - predictedZ;
+      const dDist = Math.sqrt(ddx * ddx + ddz * ddz);
+      intensity = Math.max(0, 1 - dDist / 25); // 0 at 25+ units, 1 at 0
+    }
+    const pulseSpeed = 0.003 + intensity * 0.009;
+    const pulseBase = 0.5 + intensity * 0.4;
+    const pulseAmp = 0.3 - intensity * 0.1;
+    const pulse = pulseBase + Math.sin(Date.now() * pulseSpeed) * pulseAmp;
     deliveryMesh.userData.mat.opacity = pulse;
-    deliveryMesh.rotation.y += dt * 0.5;
+    deliveryMesh.userData.mat.emissiveIntensity = 1.0 + intensity * 3.0;
+    const dBeam = deliveryMesh.children[2]; // beam
+    if (dBeam && dBeam.material) dBeam.material.opacity = 0.1 + intensity * 0.5;
+    const dLight = deliveryMesh.children[3]; // point light
+    if (dLight) { dLight.intensity = 3 + intensity * 8; dLight.distance = 10 + intensity * 15; }
+    const dInner = deliveryMesh.children[1]; // inner ring
+    if (dInner && dInner.material) dInner.material.opacity = 0.3 + intensity * 0.5;
+    deliveryMesh.rotation.y += dt * (0.5 + intensity * 3.0);
+    const dScale = 1 + intensity * 0.3;
+    deliveryMesh.scale.set(dScale, 1 + intensity * 0.5, dScale);
   } else {
     if (flagGroup) { scene.remove(flagGroup); flagGroup = null; }
     if (deliveryMesh) deliveryMesh.visible = false;

@@ -461,19 +461,38 @@ function updateEnemies(room, dt) {
             e.chargeVz = (cdz / cdist) * e.speed * 3;
           }
         } else if (e.aiState === 'charging') {
-          e.x += e.chargeVx * dt; e.z += e.chargeVz * dt;
+          // Sub-step charge movement to prevent wall tunneling
+          const chargeDist = Math.sqrt(e.chargeVx * e.chargeVx + e.chargeVz * e.chargeVz) * dt;
+          const steps = Math.max(1, Math.ceil(chargeDist / 0.5));
+          const subDt = dt / steps;
+          let hitWall = false;
+          for (let s = 0; s < steps; s++) {
+            e.x += e.chargeVx * subDt; e.z += e.chargeVz * subDt;
+            for (const [, w] of room.walls) {
+              const push = wallPush(e.x, e.z, w, 0.6);
+              if (push) {
+                e.x += push.x; e.z += push.z;
+                w.hp -= e.damage * 0.5;
+                hitWall = true;
+                break;
+              }
+            }
+            if (hitWall) { e.aiState = 'idle'; e.chargeCooldown = 2000; break; }
+          }
           e.chargeTimer -= TICK_MS;
-          for (const [, p] of room.players) {
-            if (!p.alive) continue;
-            const pdx = p.x - e.x; const pdz = p.z - e.z;
-            if (pdx * pdx + pdz * pdz < 2) {
-              damagePlayer(room, p, e.damage);
-              if (p.upgrades && p.upgrades.thorns) {
-                damageEnemy(room, e, 5 * p.upgrades.thorns, p, false);
+          if (!hitWall) {
+            for (const [, p] of room.players) {
+              if (!p.alive) continue;
+              const pdx = p.x - e.x; const pdz = p.z - e.z;
+              if (pdx * pdx + pdz * pdz < 2) {
+                damagePlayer(room, p, e.damage);
+                if (p.upgrades && p.upgrades.thorns) {
+                  damageEnemy(room, e, 5 * p.upgrades.thorns, p, false);
+                }
               }
             }
           }
-          if (e.chargeTimer <= 0) { e.aiState = 'idle'; e.chargeCooldown = 2000; }
+          if (e.chargeTimer <= 0 && e.aiState !== 'idle') { e.aiState = 'idle'; e.chargeCooldown = 2000; }
         }
         break;
       }
