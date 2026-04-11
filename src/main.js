@@ -1,4 +1,4 @@
-import { initRenderer, render, clock, updateCamera, setCamDt } from './renderer.js';
+import { initRenderer, render, clock, updateCamera, setCamDt, camera } from './renderer.js';
 import { createArena, setBiome, updateBiome, updateArenaRadius } from './arena.js';
 import { createPlayerMesh, updatePlayerMesh, setPlayerRotation, setPlayerDashing, removePlayerMesh, markLocalPlayer, flashPlayer, updateAfterimages, loadCharacters } from './player.js';
 import { createEnemyMesh, updateEnemyMesh, flashEnemy, removeEnemyMesh, removeAllEnemies, updateDyingEnemies, loadMonsterModels } from './enemy.js';
