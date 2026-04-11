@@ -119,6 +119,10 @@ export function showCombo(combo) {
 export function updatePing(ms) { pingEl.textContent = ms + 'ms'; }
 
 export function getPlayerName() {
+  // Check for portal username in URL params
+  const params = new URLSearchParams(window.location.search);
+  const portalName = params.get('username');
+  if (portalName) return portalName.slice(0, 12);
   return document.getElementById('name-input').value.trim().slice(0, 12) ||
     'Warrior_' + Math.floor(Math.random() * 9000 + 1000);
 }

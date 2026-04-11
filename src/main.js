@@ -16,6 +16,7 @@ import { showUpgradeShop, hideUpgradeShop } from './upgrades.js';
 import { loadModels, modelsReady, cloneTree } from './models.js';
 import { loadDecorations, buildArenaDecorations, clearDecorations } from './decorations.js';
 import { initDomeScene } from './landing-scene.js';
+import { isPortalEntry, createExitPortal, createEntryPortal, updatePortals, removePortals, getPortalName, portalGameOverRedirect } from './portal.js';
 
 // Screen edge damage pulse
 const flashOverlay = document.getElementById('flash-overlay');
@@ -31,8 +32,10 @@ function pulseDamageOverlay() {
 
 initRenderer();
 createArena();
-showTitle();
-initDomeScene();
+if (!isPortalEntry) {
+  showTitle();
+  initDomeScene();
+}
 
 let gameActive = false;
 let lastPing = 0;
@@ -332,6 +335,7 @@ document.getElementById('play-btn').addEventListener('click', startGame);
 document.getElementById('restart-btn').addEventListener('click', startGame);
 document.getElementById('menu-btn').addEventListener('click', quitToMenu);
 document.getElementById('go-menu-btn').addEventListener('click', quitToMenu);
+document.getElementById('portal-btn').addEventListener('click', () => { portalGameOverRedirect(); });
 
 // Party mode buttons
 document.getElementById('party-btn').addEventListener('click', () => { showPartySetup(); });
@@ -403,6 +407,7 @@ function quitToMenu() {
   obstacleMeshes.clear();
   cachedObstacles = [];
   clearDecorations();
+  removePortals();
   resetParty();
   hidePartyRoundHUD();
   hideTurnReady();
@@ -436,6 +441,7 @@ async function startGame() {
     cachedObstacles = [];
     nearMissed.clear();
     removeFlagMeshes();
+    removePortals();
     timeScale = 1.0;
       hasPrediction = false;
     predDashTimer = 0;
@@ -446,6 +452,8 @@ async function startGame() {
     markLocalPlayer(getMyId());
     scene.add(ghostWall);
     buildArenaDecorations(40);
+    createExitPortal();
+    createEntryPortal();
     if (isMobile()) showMobileControls();
   } catch (err) {
     console.error('Connection failed:', err);
@@ -641,6 +649,9 @@ function gameLoop() {
         ghostWall.visible = false;
       }
     }
+
+    // Update portal collision + animation
+    if (hasPrediction) updatePortals(rawDt, predictedX, predictedZ, camera);
 
     if (Date.now() - lastPing > 2000) {
       sendPing();
@@ -1066,6 +1077,14 @@ function handleEvent(ev) {
       }
       break;
   }
+}
+
+// Auto-start when arriving from a portal (skip title, no name input needed)
+if (isPortalEntry) {
+  // Set portal username into name input if available
+  const portalName = getPortalName();
+  if (portalName) document.getElementById('name-input').value = portalName;
+  startGame();
 }
 
 gameLoop();

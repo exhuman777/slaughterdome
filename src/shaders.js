@@ -1,4 +1,4 @@
-import * as THREE from 'https://esm.sh/three@0.162.0';
+import * as THREE from 'three/webgpu';
 
 // Custom color grading + vignette + scanline shader
 export const ColorGradeShader = {

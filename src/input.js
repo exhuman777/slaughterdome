@@ -1,5 +1,5 @@
 import { camera } from './renderer.js';
-import * as THREE from 'https://esm.sh/three@0.162.0';
+import * as THREE from 'three/webgpu';
 
 const keys = {};
 const mouse = { x: 0, z: 0, left: false, right: false };

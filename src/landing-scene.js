@@ -1,5 +1,5 @@
 // Mini Three.js dome visualization for landing page
-import * as THREE from 'https://esm.sh/three@0.162.0';
+import * as THREE from 'three/webgpu';
 
 let scene, camera, renderer, active = false;
 let arenaRing, innerRing, player, flag, walls = [], enemies = [], particles = [];

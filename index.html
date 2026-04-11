@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="screen-orientation" content="landscape">
 <title>SLAUGHTERDOME</title>
+<script async src="https://vibejam.cc/2026/widget.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Bangers&family=Permanent+Marker&family=Bungee&family=Press+Start+2P&family=Creepster&family=Russo+One&family=Black+Ops+One&family=Righteous&family=Orbitron:wght@700&family=Alfa+Slab+One&display=swap" rel="stylesheet">
 <style>
@@ -728,6 +729,7 @@
       </div>
       <div class="go-divider"></div>
       <button id="restart-btn">PLAY AGAIN</button>
+      <button id="portal-btn" style="background:transparent;color:#e6993a;border:2px solid #e6993a;padding:14px 36px;font-size:16px;font-family:'Black Ops One',monospace;cursor:pointer;letter-spacing:4px;text-shadow:0 0 20px rgba(230,153,58,0.5);margin-top:8px;">NEXT GAME</button>
       <button id="go-menu-btn">MAIN MENU</button>
     </div>
   </div>
@@ -769,6 +771,7 @@
   <div id="flag-hud"></div>
   <div id="flag-arrow" class="offscreen-arrow"><span class="arrow-label" style="color:#e6993a;">FLAG</span></div>
   <div id="delivery-arrow" class="offscreen-arrow delivery"><span class="arrow-label" style="color:#ffcc44;">DELIVER</span></div>
+  <div id="portal-arrow" class="offscreen-arrow" style="display:none;"><span class="arrow-label" style="color:#e6993a;">PORTAL</span></div>
   <div id="game-tip"></div>
   <div id="arena-warn">ARENA SHRINKING</div>
   <div id="hud-controls" style="display:none;">WASD move | LMB shoot | Q sword | RMB AoE | E wall | SPACE dash</div>
@@ -780,6 +783,16 @@
 <script>
   // Override for custom server URL
   // window.SLAUGHTERDOME_WS = 'wss://your-server.up.railway.app';
+</script>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://esm.sh/three@0.175.0",
+    "three/webgpu": "https://esm.sh/three@0.175.0/webgpu",
+    "three/tsl": "https://esm.sh/three@0.175.0/tsl",
+    "three/addons/": "https://esm.sh/three@0.175.0/addons/"
+  }
+}
 </script>
 <script type="module" src="src/main.js"></script>
 </body>
