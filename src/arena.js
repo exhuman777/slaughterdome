@@ -141,7 +141,7 @@ function generateFloorTexture(size) {
 }
 
 export function createArena() {
-  const floorTex = generateFloorTexture(512);
+  const floorTex = generateFloorTexture(256);
   const floorGeo = new THREE.CircleGeometry(ARENA_RADIUS, 64);
   floorGeo.rotateX(-Math.PI / 2);
   const floorMat = new THREE.MeshStandardMaterial({

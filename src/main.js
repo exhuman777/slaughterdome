@@ -15,7 +15,7 @@ import { initParty, isPartyMode, getPartyState, startTurn, endTurn, getPartyHUD,
 import { showUpgradeShop, hideUpgradeShop } from './upgrades.js';
 import { loadModels, modelsReady, cloneTree } from './models.js';
 import { loadDecorations, buildArenaDecorations, clearDecorations } from './decorations.js';
-import { initDomeScene } from './landing-scene.js';
+import { initDomeScene, stopDomeScene } from './landing-scene.js';
 import { isPortalEntry, createExitPortal, createEntryPortal, updatePortals, removePortals, getPortalName, portalGameOverRedirect } from './portal.js';
 
 // Screen edge damage pulse
@@ -30,11 +30,15 @@ function pulseDamageOverlay() {
   flashOverlay.style.opacity = '0';
 }
 
-await initRenderer();
-createArena();
+try {
+  await initRenderer();
+  createArena();
+} catch (e) {
+  console.error('Renderer init failed:', e);
+}
 if (!isPortalEntry) {
   showTitle();
-  await initDomeScene();
+  try { await initDomeScene(); } catch (e) { console.error('Dome scene failed:', e); }
 }
 
 let gameActive = false;
@@ -417,6 +421,7 @@ function quitToMenu() {
 }
 
 async function startGame() {
+  stopDomeScene();
   resumeAudio();
   hideUpgradeShop();
   const name = getPlayerName();

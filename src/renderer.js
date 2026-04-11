@@ -17,7 +17,7 @@ export async function initRenderer() {
 
   renderer = new THREE.WebGPURenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 2.2;
   await renderer.init();
@@ -28,7 +28,7 @@ export async function initRenderer() {
   const sun = new THREE.DirectionalLight(0xffffff, 1.6);
   sun.position.set(20, 40, 20);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(1024, 1024);
+  sun.shadow.mapSize.set(512, 512);
   sun.shadow.camera.near = 1;
   sun.shadow.camera.far = 100;
   sun.shadow.camera.left = -50;
@@ -43,19 +43,16 @@ export async function initRenderer() {
 
   clock = new THREE.Clock();
 
-  // Post-processing with bloom (optional -- falls back to direct WebGPU render)
+  // Post-processing with bloom (only if bloom actually available -- skip passthrough)
   try {
     const tsl = await import('three/tsl');
-    if (THREE.PostProcessing && tsl.pass) {
+    if (THREE.PostProcessing && tsl.pass && tsl.bloom) {
       const pp = new THREE.PostProcessing(renderer);
       const scenePass = tsl.pass(scene, camera);
-      const color = scenePass.getTextureNode();
-      pp.outputNode = tsl.bloom ? tsl.bloom(color, 0.15, 0.5, 0.6) : color;
+      pp.outputNode = tsl.bloom(scenePass.getTextureNode(), 0.15, 0.5, 0.6);
       postProcessing = pp;
     }
-  } catch (e) {
-    console.warn('Post-processing unavailable:', e);
-  }
+  } catch (e) { /* direct render fallback */ }
 
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;

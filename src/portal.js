@@ -24,58 +24,44 @@ const portalArrowEl = document.getElementById('portal-arrow');
 function createPortalMesh(color, label) {
   const group = new THREE.Group();
 
-  // Main torus ring (vertical)
-  const torusGeo = new THREE.TorusGeometry(PORTAL_RADIUS, 0.18, 16, 32);
-  const torusMat = new THREE.MeshStandardMaterial({
-    color, emissive: color, emissiveIntensity: 1.5,
-    transparent: true, opacity: 0.9,
+  // Main torus ring (vertical, low-poly)
+  const torusGeo = new THREE.TorusGeometry(PORTAL_RADIUS, 0.2, 8, 16);
+  const torusMat = new THREE.MeshBasicMaterial({
+    color, transparent: true, opacity: 0.9,
   });
   const torus = new THREE.Mesh(torusGeo, torusMat);
   torus.name = 'portalRing';
   group.add(torus);
 
-  // Inner swirl disc
-  const discGeo = new THREE.CircleGeometry(PORTAL_RADIUS - 0.3, 32);
+  // Inner disc
+  const discGeo = new THREE.CircleGeometry(PORTAL_RADIUS - 0.3, 16);
   const discMat = new THREE.MeshBasicMaterial({
-    color, transparent: true, opacity: 0.25, side: THREE.DoubleSide,
+    color, transparent: true, opacity: 0.2, side: THREE.DoubleSide,
   });
   const disc = new THREE.Mesh(discGeo, discMat);
   disc.name = 'portalDisc';
   group.add(disc);
 
-  // Second inner ring for depth
-  const innerGeo = new THREE.TorusGeometry(PORTAL_RADIUS * 0.55, 0.08, 8, 24);
-  const innerMat = new THREE.MeshBasicMaterial({
-    color: 0xffffff, transparent: true, opacity: 0.35,
-  });
-  const inner = new THREE.Mesh(innerGeo, innerMat);
-  inner.name = 'innerRing';
-  group.add(inner);
-
   // Ground glow ring
-  const groundGeo = new THREE.RingGeometry(PORTAL_RADIUS - 0.5, PORTAL_RADIUS + 0.8, 24);
+  const groundGeo = new THREE.RingGeometry(PORTAL_RADIUS - 0.5, PORTAL_RADIUS + 0.8, 16);
   groundGeo.rotateX(-Math.PI / 2);
   const groundMat = new THREE.MeshBasicMaterial({
-    color, transparent: true, opacity: 0.25, side: THREE.DoubleSide,
+    color, transparent: true, opacity: 0.2, side: THREE.DoubleSide,
   });
   const ground = new THREE.Mesh(groundGeo, groundMat);
   ground.position.y = -PORTAL_RADIUS + 0.05;
   ground.name = 'groundGlow';
   group.add(ground);
 
-  // Point light
-  const light = new THREE.PointLight(color, 6, 18);
-  group.add(light);
-
-  // Label sprite
+  // Label sprite (smaller canvas)
   const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 64;
+  canvas.width = 256;
+  canvas.height = 32;
   const ctx = canvas.getContext('2d');
-  ctx.font = 'bold 32px monospace';
+  ctx.font = 'bold 20px monospace';
   ctx.textAlign = 'center';
   ctx.fillStyle = '#' + color.toString(16).padStart(6, '0');
-  ctx.fillText(label, 256, 44);
+  ctx.fillText(label, 128, 24);
   const tex = new THREE.CanvasTexture(canvas);
   const spriteMat = new THREE.SpriteMaterial({ map: tex, transparent: true });
   const sprite = new THREE.Sprite(spriteMat);
@@ -112,22 +98,20 @@ export function createEntryPortal() {
   scene.add(entryPortalGroup);
 }
 
-function animatePortal(group, dt, reverse) {
+function animatePortal(group) {
   const disc = group.getObjectByName('portalDisc');
-  if (disc) disc.rotation.z = portalTime * (reverse ? -2 : 2);
-  const inner = group.getObjectByName('innerRing');
-  if (inner) inner.rotation.z = portalTime * (reverse ? 3 : -3);
+  if (disc) disc.rotation.z = portalTime * 2;
   const ring = group.getObjectByName('portalRing');
-  if (ring) ring.material.emissiveIntensity = 1.0 + Math.sin(portalTime * 2) * 0.5;
+  if (ring) ring.material.opacity = 0.7 + Math.sin(portalTime * 2) * 0.3;
   const glow = group.getObjectByName('groundGlow');
-  if (glow) glow.material.opacity = 0.15 + Math.sin(portalTime * 3) * 0.1;
+  if (glow) glow.material.opacity = 0.12 + Math.sin(portalTime * 3) * 0.08;
 }
 
 export function updatePortals(dt, playerX, playerZ, camera) {
   portalTime += dt;
 
   if (exitPortalGroup) {
-    animatePortal(exitPortalGroup, dt, false);
+    animatePortal(exitPortalGroup);
     const ex = exitPortalGroup.position.x;
     const ez = exitPortalGroup.position.z;
     const dx = playerX - ex;
@@ -145,7 +129,7 @@ export function updatePortals(dt, playerX, playerZ, camera) {
   }
 
   if (entryPortalGroup) {
-    animatePortal(entryPortalGroup, dt, true);
+    animatePortal(entryPortalGroup);
     const rx = entryPortalGroup.position.x;
     const rz = entryPortalGroup.position.z;
     const dx = playerX - rx;
