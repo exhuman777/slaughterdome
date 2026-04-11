@@ -1,4 +1,4 @@
-import * as THREE from 'https://esm.sh/three@0.162.0';
+import * as THREE from 'three/webgpu';
 import { scene } from './renderer.js';
 
 // Pickup model templates (loaded async)
@@ -30,7 +30,7 @@ const FALLBACK_GEOS = {
 
 export async function loadPickupModels() {
   try {
-    const { OBJLoader } = await import('https://esm.sh/three@0.162.0/addons/loaders/OBJLoader.js');
+    const { OBJLoader } = await import('three/addons/loaders/OBJLoader.js');
     const loader = new OBJLoader();
     const gemsObj = await new Promise((resolve, reject) => {
       loader.load('models/gems.obj', resolve, null, reject);

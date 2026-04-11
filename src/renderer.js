@@ -1,9 +1,7 @@
 import * as THREE from 'three/webgpu';
-import { pass } from 'three/tsl';
 
 export let scene, camera, renderer, clock;
-let postProcessing;
-let bloomFn = null;
+let postProcessing = null;
 
 const CAMERA_HEIGHT = 35;
 const CAMERA_ANGLE = 55 * (Math.PI / 180);
@@ -45,15 +43,19 @@ export async function initRenderer() {
 
   clock = new THREE.Clock();
 
-  // Post-processing with TSL bloom (optional -- falls back to direct render)
+  // Post-processing with bloom (optional -- falls back to direct WebGPU render)
   try {
     const tsl = await import('three/tsl');
-    bloomFn = tsl.bloom;
-  } catch (e) { /* bloom not available */ }
-  postProcessing = new THREE.PostProcessing(renderer);
-  const scenePass = pass(scene, camera);
-  const scenePassColor = scenePass.getTextureNode();
-  postProcessing.outputNode = bloomFn ? bloomFn(scenePassColor, 0.15, 0.5, 0.6) : scenePassColor;
+    if (THREE.PostProcessing && tsl.pass) {
+      const pp = new THREE.PostProcessing(renderer);
+      const scenePass = tsl.pass(scene, camera);
+      const color = scenePass.getTextureNode();
+      pp.outputNode = tsl.bloom ? tsl.bloom(color, 0.15, 0.5, 0.6) : color;
+      postProcessing = pp;
+    }
+  } catch (e) {
+    console.warn('Post-processing unavailable:', e);
+  }
 
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -90,5 +92,9 @@ export function updateCamera(targetX, targetZ, aimX, aimZ) {
 }
 
 export function render() {
-  postProcessing.render();
+  if (postProcessing) {
+    postProcessing.render();
+  } else {
+    renderer.render(scene, camera);
+  }
 }

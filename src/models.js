@@ -1,4 +1,4 @@
-import * as THREE from 'https://esm.sh/three@0.162.0';
+import * as THREE from 'three/webgpu';
 
 let loader = null;
 const templates = [];
@@ -54,7 +54,7 @@ function prepare(obj, h, type) {
 
 export async function loadModels() {
   try {
-    const { OBJLoader } = await import('https://esm.sh/three@0.162.0/addons/loaders/OBJLoader.js');
+    const { OBJLoader } = await import('three/addons/loaders/OBJLoader.js');
     loader = new OBJLoader();
   } catch (e) { console.warn('OBJLoader failed:', e); return; }
   const defs = [

@@ -1,4 +1,4 @@
-import * as THREE from 'https://esm.sh/three@0.162.0';
+import * as THREE from 'three/webgpu';
 import { scene } from './renderer.js';
 
 const ENEMY_VISUALS = {
@@ -22,8 +22,8 @@ export async function loadMonsterModels() {
   dbg('Starting load...');
   try {
     const [{ GLTFLoader }, SkeletonUtils] = await Promise.all([
-      import('https://esm.sh/three@0.162.0/addons/loaders/GLTFLoader.js'),
-      import('https://esm.sh/three@0.162.0/addons/utils/SkeletonUtils.js'),
+      import('three/addons/loaders/GLTFLoader.js'),
+      import('three/addons/utils/SkeletonUtils.js'),
     ]);
     globalThis._MonsterSkeletonUtils = SkeletonUtils;
     dbg('GLTFLoader + SkeletonUtils OK');

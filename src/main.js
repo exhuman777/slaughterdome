@@ -4,7 +4,7 @@ import { createPlayerMesh, updatePlayerMesh, setPlayerRotation, setPlayerDashing
 import { createEnemyMesh, updateEnemyMesh, flashEnemy, removeEnemyMesh, removeAllEnemies, updateDyingEnemies, loadMonsterModels } from './enemy.js';
 import { updatePickups as updatePickupMeshes, syncPickups, loadPickupModels } from './pickups.js';
 import { updateParticles, spawnKillParticles, spawnSparks, spawnBloodDrops, spawnDustPuff, spawnSpeedTrail, spawnFloatingText, spawnGoreChunks, setParticleLimit } from './particles.js';
-import * as THREE from 'https://esm.sh/three@0.162.0';
+import * as THREE from 'three/webgpu';
 import { scene } from './renderer.js';
 import { showGunShot, showSpecialAttack, showDamageNumber, showExplosion, showHitImpact, updateCombatVisuals, showSwordSlash } from './combat.js';
 import { playHit, playKill, playExplosion, playWaveStart, playBossSpawn, playPickup, playDeath, playCombo, resumeAudio, playShot, playWallPlace, playDash, playWallDestroy, playWaveClear, playSword } from './audio.js';
@@ -30,11 +30,11 @@ function pulseDamageOverlay() {
   flashOverlay.style.opacity = '0';
 }
 
-initRenderer();
+await initRenderer();
 createArena();
 if (!isPortalEntry) {
   showTitle();
-  initDomeScene();
+  await initDomeScene();
 }
 
 let gameActive = false;
@@ -143,7 +143,7 @@ function positionArrow(el, worldX, worldZ) {
 // Load flag OBJ model
 async function loadFlagModel() {
   try {
-    const { OBJLoader } = await import('https://esm.sh/three@0.162.0/addons/loaders/OBJLoader.js');
+    const { OBJLoader } = await import('three/addons/loaders/OBJLoader.js');
     const flagLoader = new OBJLoader();
     const obj = await new Promise(r => flagLoader.load('models/flag.obj', r, null, () => r(null)));
     if (!obj) return;

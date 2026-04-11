@@ -1,4 +1,4 @@
-import * as THREE from 'https://esm.sh/three@0.162.0';
+import * as THREE from 'three/webgpu';
 import { scene } from './renderer.js';
 
 const PLAYER_COLORS = [0x44aaff, 0xff5555, 0x55ff55, 0xffff55];
@@ -11,8 +11,8 @@ const charTemplates = [];
 export async function loadCharacters() {
   try {
     const [{ GLTFLoader }, SkeletonUtils] = await Promise.all([
-      import('https://esm.sh/three@0.162.0/addons/loaders/GLTFLoader.js'),
-      import('https://esm.sh/three@0.162.0/addons/utils/SkeletonUtils.js'),
+      import('three/addons/loaders/GLTFLoader.js'),
+      import('three/addons/utils/SkeletonUtils.js'),
     ]);
     globalThis._SkeletonUtils = SkeletonUtils;
     const gltfLoader = new GLTFLoader();

@@ -7,15 +7,16 @@ let time = 0;
 const ARENA_MAX = 12;
 const ARENA_MIN = 5;
 
-export function initDomeScene() {
+export async function initDomeScene() {
   const canvas = document.getElementById('dome-scene');
   if (!canvas) return;
 
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer = new THREE.WebGPURenderer({ canvas, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.setClearColor(0x0a0808, 1);
+  await renderer.init();
 
   scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0808);
   scene.fog = new THREE.Fog(0x0a0808, 25, 40);
 
   camera = new THREE.PerspectiveCamera(45, canvas.clientWidth / canvas.clientHeight, 0.1, 100);
