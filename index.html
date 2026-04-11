@@ -194,22 +194,28 @@
 
   /* Controls */
   .controls-section { margin-bottom: 8px; }
-  .ctrl-group { margin-bottom: 14px; }
+  .ctrl-columns {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 2px; margin-bottom: 8px;
+    background: #1a0808;
+  }
+  .ctrl-group { background: #0e0a0a; padding: 16px; }
   .ctrl-group-title {
-    font-size: 16px; color: #ee4444; letter-spacing: 4px;
-    margin-bottom: 12px; font-weight: 700;
+    font-size: 14px; color: #ee4444; letter-spacing: 4px;
+    margin-bottom: 10px; font-weight: 700;
   }
   .ctrl-row-lg {
-    display: flex; align-items: center; gap: 18px;
-    padding: 10px 0; border-bottom: 1px solid #1a1210;
+    display: flex; align-items: center; gap: 12px;
+    padding: 6px 0; border-bottom: 1px solid #1a1210;
   }
+  .ctrl-row-lg:last-child { border-bottom: none; }
   .ctrl-key-lg {
     background: #0e0a0a; border: 1px solid #441111; color: #ee5555;
-    padding: 6px 14px; font-size: 16px; font-weight: 700;
-    min-width: 80px; text-align: center; flex-shrink: 0;
+    padding: 4px 10px; font-size: 14px; font-weight: 700;
+    min-width: 70px; text-align: center; flex-shrink: 0;
     text-shadow: 0 0 10px rgba(204,34,34,0.4);
   }
-  .ctrl-desc-lg { font-size: 16px; color: #b09a8a; line-height: 1.5; }
+  .ctrl-desc-lg { font-size: 13px; color: #b09a8a; line-height: 1.4; }
+  .ctrl-group-full { grid-column: 1 / -1; }
 
   /* Weapons */
   .weapons-row {
@@ -618,22 +624,26 @@
       <div class="section-divider"></div>
       <div class="section-label">How To Fight</div>
       <div class="controls-section">
-        <div class="ctrl-group">
-          <div class="ctrl-group-title">MOVEMENT</div>
-          <div class="ctrl-row-lg"><span class="ctrl-key-lg">WASD</span><span class="ctrl-desc-lg">Move</span></div>
-          <div class="ctrl-row-lg"><span class="ctrl-key-lg">SPACE</span><span class="ctrl-desc-lg">Dash with 3 charges, chain within 0.3s, i-frames</span></div>
-        </div>
-        <div class="ctrl-group">
-          <div class="ctrl-group-title">COMBAT</div>
-          <div class="ctrl-row-lg"><span class="ctrl-key-lg">LMB / SHIFT</span><span class="ctrl-desc-lg">Shoot. Hold to fire, weapon overheats</span></div>
-          <div class="ctrl-row-lg"><span class="ctrl-key-lg">RMB</span><span class="ctrl-desc-lg">Shockwave. AoE knockback blast</span></div>
-          <div class="ctrl-row-lg"><span class="ctrl-key-lg">Q</span><span class="ctrl-desc-lg">Sword. 3-hit melee combo</span></div>
-        </div>
-        <div class="ctrl-group">
-          <div class="ctrl-group-title">TACTICS</div>
-          <div class="ctrl-row-lg"><span class="ctrl-key-lg">E</span><span class="ctrl-desc-lg">Wall mode. Place walls to block enemies and create choke points</span></div>
-          <div class="ctrl-row-lg"><span class="ctrl-key-lg">FLAG</span><span class="ctrl-desc-lg">Walk near the flag to pick up, deliver to the drop zone to clear wave</span></div>
-          <div class="ctrl-row-lg"><span class="ctrl-key-lg">1 2 3</span><span class="ctrl-desc-lg">Pick upgrade between waves</span></div>
+        <div class="ctrl-columns">
+          <div class="ctrl-group">
+            <div class="ctrl-group-title">MOVEMENT</div>
+            <div class="ctrl-row-lg"><span class="ctrl-key-lg">WASD</span><span class="ctrl-desc-lg">Move</span></div>
+            <div class="ctrl-row-lg"><span class="ctrl-key-lg">SPACE</span><span class="ctrl-desc-lg">Dash (3 charges, i-frames)</span></div>
+          </div>
+          <div class="ctrl-group">
+            <div class="ctrl-group-title">COMBAT</div>
+            <div class="ctrl-row-lg"><span class="ctrl-key-lg">LMB</span><span class="ctrl-desc-lg">Shoot (hold to fire)</span></div>
+            <div class="ctrl-row-lg"><span class="ctrl-key-lg">RMB</span><span class="ctrl-desc-lg">AoE knockback</span></div>
+            <div class="ctrl-row-lg"><span class="ctrl-key-lg">Q</span><span class="ctrl-desc-lg">Sword combo</span></div>
+          </div>
+          <div class="ctrl-group ctrl-group-full">
+            <div class="ctrl-group-title">TACTICS</div>
+            <div style="display:flex;gap:2px;">
+              <div style="flex:1;"><div class="ctrl-row-lg"><span class="ctrl-key-lg">E</span><span class="ctrl-desc-lg">Wall mode</span></div></div>
+              <div style="flex:1;"><div class="ctrl-row-lg"><span class="ctrl-key-lg">FLAG</span><span class="ctrl-desc-lg">Pick up, deliver to clear wave</span></div></div>
+              <div style="flex:1;"><div class="ctrl-row-lg"><span class="ctrl-key-lg">1 2 3</span><span class="ctrl-desc-lg">Pick upgrade</span></div></div>
+            </div>
+          </div>
         </div>
       </div>
 
