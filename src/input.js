@@ -182,6 +182,16 @@ export function isMobile() {
   return navigator.maxTouchPoints > 0 && window.innerWidth < 1024;
 }
 
+let mobileElements = [];
+
+export function showMobileControls() {
+  for (const el of mobileElements) el.style.display = '';
+}
+
+export function hideMobileControls() {
+  for (const el of mobileElements) el.style.display = 'none';
+}
+
 function mobileBtn(text, color, size) {
   const btn = document.createElement('div');
   btn.textContent = text;
@@ -342,6 +352,11 @@ export function setupMobileControls() {
   tapBtn(dashBtn, () => { touchDash = true; });
   tapBtn(swordBtn, () => { touchSword = true; });
   tapBtn(wallBtn, () => { touchWall = true; });
+
+  // Track all mobile UI elements so we can show/hide them
+  mobileElements = [left.pad, right.pad, dashBtn, swordBtn, specBtn, wallBtn];
+  // Hide until game starts
+  hideMobileControls();
 }
 
 export function getMobileInput() {

@@ -8,7 +8,7 @@ import * as THREE from 'https://esm.sh/three@0.162.0';
 import { scene } from './renderer.js';
 import { showGunShot, showSpecialAttack, showDamageNumber, showExplosion, showHitImpact, updateCombatVisuals, showSwordSlash } from './combat.js';
 import { playHit, playKill, playExplosion, playWaveStart, playBossSpawn, playPickup, playDeath, playCombo, resumeAudio, playShot, playWallPlace, playDash, playWallDestroy, playWaveClear, playSword } from './audio.js';
-import { getInput, getMobileInput, isMobile, setupMobileControls, isWallMode, exitWallMode, resetInput, hasGamepad } from './input.js';
+import { getInput, getMobileInput, isMobile, setupMobileControls, isWallMode, exitWallMode, resetInput, hasGamepad, showMobileControls, hideMobileControls } from './input.js';
 import { connect, sendInput, sendPing, getState, getMyId, getPing, drainEvents, disconnect } from './network.js';
 import { showTitle, showHUD, showGameOver, updateHUD, showCombo, updatePing, getPlayerName, updateUpgradeDisplay, updateWeaponHUD, showControlsHint, hideControlsHint, updateCountdown, updateAbilities, updateInfo, updatePlayers, showYouDied, hideYouDied, updateWallMode, showGameTip, showArenaWarn, updateFlagHUD, showPartySetup, hidePartySetup, getPartyNames, addPartyPlayer, showTurnReady, hideTurnReady, showPartyRoundHUD, hidePartyRoundHUD, showPodium, hidePodium } from './ui.js';
 import { initParty, isPartyMode, getPartyState, startTurn, endTurn, getPartyHUD, getResults, resetParty } from './party.js';
@@ -407,6 +407,7 @@ function quitToMenu() {
   hidePartyRoundHUD();
   hideTurnReady();
   hidePodium();
+  if (isMobile()) hideMobileControls();
   showTitle();
 }
 
@@ -445,6 +446,7 @@ async function startGame() {
     markLocalPlayer(getMyId());
     scene.add(ghostWall);
     buildArenaDecorations(40);
+    if (isMobile()) showMobileControls();
   } catch (err) {
     console.error('Connection failed:', err);
   }
@@ -1047,6 +1049,7 @@ function handleEvent(ev) {
       updateWallMode(false);
       ghostWall.visible = false;
       hidePartyRoundHUD();
+      if (isMobile()) hideMobileControls();
       for (const c of corpses) { scene.remove(c); c.material.dispose(); }
       corpses.length = 0;
       playDeath();
