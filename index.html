@@ -572,6 +572,40 @@
     transition:all 0.2s;
   }
   #podium-menu-btn:hover { background:#e6993a; color:#0a0808; }
+
+  /* Dome scene canvas */
+  #dome-scene {
+    width: 100%; height: 220px; display: block; margin-bottom: 12px;
+    border-top: 1px solid #331111; border-bottom: 1px solid #331111;
+  }
+
+  /* ====== MOBILE ====== */
+  @media (max-width: 1024px) {
+    .landing-body { padding: 0 20px 40px; }
+    .hero-content { padding: 0 20px 30px; }
+    .feature-grid { grid-template-columns: repeat(3, 1fr) !important; }
+    .feature-box .f-val { font-size: 28px; }
+    .feature-box .f-label { font-size: 11px; letter-spacing: 2px; }
+    .feature-box { padding: 14px 8px; }
+    .ctrl-columns { grid-template-columns: 1fr; }
+    .lore-block p { font-size: 14px; line-height: 1.6; }
+    .hero-lore { font-size: 14px; }
+    .section-label { font-size: 14px; }
+    .wep-name { font-size: 14px; }
+    .wep-stat { font-size: 12px; }
+    .action-banner { margin: 24px -20px; }
+    #play-btn { padding: 14px 36px; font-size: 18px; letter-spacing: 5px; }
+    #party-btn { padding: 14px 24px !important; font-size: 16px !important; letter-spacing: 4px !important; margin-left: 0 !important; margin-top: 10px !important; display: inline-block; }
+    #dome-scene { height: 160px; }
+    /* Hide keyboard HUD on mobile - touch buttons replace them */
+    #hud-abilities { display: none !important; }
+    #hud-controls { display: none !important; }
+    #hud-info { bottom: 160px !important; left: 10px !important; font-size: 10px !important; }
+    #upgrade-strip { bottom: 160px !important; font-size: 9px !important; }
+    #hud-weapon { bottom: 150px !important; }
+    #hud-weapon #weapon-name { font-size: 11px; }
+    #hud-weapon #ammo-bar { width: 140px; }
+  }
 </style>
 </head>
 <body>
@@ -600,6 +634,7 @@
 
       <div class="section-divider"></div>
       <div class="section-label">The Dome</div>
+      <canvas id="dome-scene"></canvas>
       <div class="lore-block">
         <p>Three forces shape every fight in the Dome:</p>
         <p><span class="red">THE SHRINKING ARENA</span> The Dome contracts after every wave, forcing fighters into tighter quarters. Toxic water pools spawn from wave 5, cutting off escape routes. Stand outside the ring and the Dome bleeds you dry.</p>

@@ -348,16 +348,11 @@ export function getMobileInput() {
   const dash = touchDash; touchDash = false;
   const sword = touchSword; touchSword = false;
   const wall = touchWall; touchWall = false;
-  // When aim stick active, use its direction; otherwise fall back to move direction
-  let aimDx = touchAimDx, aimDz = touchAimDz;
-  if (!touchAimActive && (touchMove.dx !== 0 || touchMove.dz !== 0)) {
-    const mLen = Math.sqrt(touchMove.dx * touchMove.dx + touchMove.dz * touchMove.dz);
-    if (mLen > 0) { aimDx = touchMove.dx / mLen; aimDz = touchMove.dz / mLen; }
-  }
+  // Always use last known aim direction (prevents camera snap on stick release)
   return {
     dx: touchMove.dx, dz: touchMove.dz,
     attack: touchAttack, special: touchSpecial,
-    aimX: aimDx * 20, aimZ: aimDz * 20,
+    aimX: touchAimDx * 20, aimZ: touchAimDz * 20,
     dash, sword, wall, mobileAimRelative: true,
   };
 }

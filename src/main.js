@@ -15,6 +15,7 @@ import { initParty, isPartyMode, getPartyState, startTurn, endTurn, getPartyHUD,
 import { showUpgradeShop, hideUpgradeShop } from './upgrades.js';
 import { loadModels, modelsReady, cloneTree } from './models.js';
 import { loadDecorations, buildArenaDecorations, clearDecorations } from './decorations.js';
+import { initDomeScene } from './landing-scene.js';
 
 // Screen edge damage pulse
 const flashOverlay = document.getElementById('flash-overlay');
@@ -31,6 +32,7 @@ function pulseDamageOverlay() {
 initRenderer();
 createArena();
 showTitle();
+initDomeScene();
 
 let gameActive = false;
 let lastPing = 0;
