@@ -1,19 +1,14 @@
-import * as THREE from 'https://esm.sh/three@0.162.0';
-import { EffectComposer } from 'https://esm.sh/three@0.162.0/addons/postprocessing/EffectComposer.js';
-import { RenderPass } from 'https://esm.sh/three@0.162.0/addons/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'https://esm.sh/three@0.162.0/addons/postprocessing/UnrealBloomPass.js';
-import { ShaderPass } from 'https://esm.sh/three@0.162.0/addons/postprocessing/ShaderPass.js';
-import { OutputPass } from 'https://esm.sh/three@0.162.0/addons/postprocessing/OutputPass.js';
-import { ColorGradeShader } from './shaders.js';
+import * as THREE from 'three/webgpu';
+import { pass } from 'three/tsl';
 
 export let scene, camera, renderer, clock;
-let composer;
-let colorGradePass;
+let postProcessing;
+let bloomFn = null;
 
 const CAMERA_HEIGHT = 35;
 const CAMERA_ANGLE = 55 * (Math.PI / 180);
 
-export function initRenderer() {
+export async function initRenderer() {
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x22222e);
   scene.fog = new THREE.Fog(0x22222e, 70, 110);
@@ -22,13 +17,12 @@ export function initRenderer() {
   camera.position.set(0, CAMERA_HEIGHT, CAMERA_HEIGHT * Math.cos(CAMERA_ANGLE));
   camera.lookAt(0, 0, 0);
 
-  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer = new THREE.WebGPURenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.8;
+  await renderer.init();
   document.body.insertBefore(renderer.domElement, document.getElementById('ui'));
 
   scene.add(new THREE.AmbientLight(0xccccdd, 1.0));
@@ -51,29 +45,20 @@ export function initRenderer() {
 
   clock = new THREE.Clock();
 
-  // Post-processing pipeline
-  composer = new EffectComposer(renderer);
-  composer.addPass(new RenderPass(scene, camera));
-
-  const bloomPass = new UnrealBloomPass(
-    new THREE.Vector2(Math.floor(window.innerWidth / 2), Math.floor(window.innerHeight / 2)),
-    0.15,  // strength (subtle)
-    0.5,   // radius
-    0.6    // threshold (only bright things bloom)
-  );
-  composer.addPass(bloomPass);
-
-  colorGradePass = new ShaderPass(ColorGradeShader);
-  composer.addPass(colorGradePass);
-
-  composer.addPass(new OutputPass());
+  // Post-processing with TSL bloom (optional -- falls back to direct render)
+  try {
+    const tsl = await import('three/tsl');
+    bloomFn = tsl.bloom;
+  } catch (e) { /* bloom not available */ }
+  postProcessing = new THREE.PostProcessing(renderer);
+  const scenePass = pass(scene, camera);
+  const scenePassColor = scenePass.getTextureNode();
+  postProcessing.outputNode = bloomFn ? bloomFn(scenePassColor, 0.15, 0.5, 0.6) : scenePassColor;
 
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
-    composer.setSize(window.innerWidth, window.innerHeight);
-    bloomPass.resolution.set(window.innerWidth, window.innerHeight);
   });
 }
 
@@ -105,8 +90,5 @@ export function updateCamera(targetX, targetZ, aimX, aimZ) {
 }
 
 export function render() {
-  if (colorGradePass) {
-    colorGradePass.uniforms.time.value = performance.now() * 0.001;
-  }
-  composer.render();
+  postProcessing.render();
 }
