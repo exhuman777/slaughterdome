@@ -1,4 +1,4 @@
-import { initRenderer, render, clock, updateCamera, setCamDt, camera } from './renderer.js';
+import { initRenderer, render, clock, updateCamera, setCamDt, camera, getFPS, updateAdaptiveQuality, getQualityLevel } from './renderer.js';
 import { createArena, setBiome, updateBiome, updateArenaRadius } from './arena.js';
 import { createPlayerMesh, updatePlayerMesh, setPlayerRotation, setPlayerDashing, removePlayerMesh, markLocalPlayer, flashPlayer, updateAfterimages, loadCharacters } from './player.js';
 import { createEnemyMesh, updateEnemyMesh, flashEnemy, removeEnemyMesh, removeAllEnemies, updateDyingEnemies, loadMonsterModels } from './enemy.js';
@@ -7,7 +7,7 @@ import { updateParticles, spawnKillParticles, spawnSparks, spawnBloodDrops, spaw
 import * as THREE from 'three/webgpu';
 import { scene } from './renderer.js';
 import { showGunShot, showSpecialAttack, showDamageNumber, showExplosion, showHitImpact, updateCombatVisuals, showSwordSlash } from './combat.js';
-import { playHit, playKill, playExplosion, playWaveStart, playBossSpawn, playPickup, playDeath, playCombo, resumeAudio, playShot, playWallPlace, playDash, playWallDestroy, playWaveClear, playSword } from './audio.js';
+import { playHit, playKill, playExplosion, playWaveStart, playBossSpawn, playPickup, playDeath, playCombo, resumeAudio, playShot, playWallPlace, playDash, playWallDestroy, playWaveClear, playSword, startMusic, stopMusic } from './audio.js';
 import { getInput, getMobileInput, isMobile, setupMobileControls, isWallMode, exitWallMode, resetInput, hasGamepad, showMobileControls, hideMobileControls } from './input.js';
 import { connect, sendInput, sendPing, getState, getMyId, getPing, drainEvents, disconnect } from './network.js';
 import { showTitle, showHUD, showGameOver, updateHUD, showCombo, updatePing, getPlayerName, updateUpgradeDisplay, updateWeaponHUD, showControlsHint, hideControlsHint, updateCountdown, updateAbilities, updateInfo, updatePlayers, showYouDied, hideYouDied, updateWallMode, showGameTip, showArenaWarn, updateFlagHUD, showPartySetup, hidePartySetup, getPartyNames, addPartyPlayer, showTurnReady, hideTurnReady, showPartyRoundHUD, hidePartyRoundHUD, showPodium, hidePodium } from './ui.js';
@@ -110,8 +110,9 @@ function updateOffscreenIndicators(state, myId) {
   }
 }
 
+const _arrowVec = new THREE.Vector3();
 function positionArrow(el, worldX, worldZ) {
-  const v = new THREE.Vector3(worldX, 0.5, worldZ);
+  const v = _arrowVec.set(worldX, 0.5, worldZ);
   v.project(camera);
   const hw = window.innerWidth / 2;
   const hh = window.innerHeight / 2;
@@ -333,6 +334,12 @@ function releaseProj(mesh, isBullet) {
 // Near-miss detection (triggers during dashes for skill reward)
 const nearMissed = new Set();
 
+// Reusable Sets for state diffing (avoid allocation per frame)
+const _serverPlayerIds = new Set();
+const _serverEnemyIds = new Set();
+const _serverProjIds = new Set();
+const _serverWallIds = new Set();
+
 if (isMobile()) setupMobileControls();
 
 document.getElementById('play-btn').addEventListener('click', startGame);
@@ -387,6 +394,7 @@ document.addEventListener('keydown', e => {
 function quitToMenu() {
   gameActive = false;
   hasPrediction = false;
+  stopMusic();
   disconnect();
   hideUpgradeShop();
   hideControlsHint();
@@ -423,6 +431,7 @@ function quitToMenu() {
 async function startGame() {
   stopDomeScene();
   resumeAudio();
+  startMusic();
   hideUpgradeShop();
   const name = getPlayerName();
   try {
@@ -670,6 +679,12 @@ function gameLoop() {
     if (state) processState(state, dt);
   }
 
+  // Adaptive quality: adjust particle limits based on quality level
+  updateAdaptiveQuality(rawDt);
+  const ql = getQualityLevel();
+  const basePLimit = perfMode ? 100 : 200;
+  setParticleLimit(ql === 0 ? 40 : ql === 1 ? 80 : basePLimit);
+
   updateBiome(visualDt);
   updatePickupMeshes(visualDt);
   updateParticles(visualDt);
@@ -677,12 +692,14 @@ function gameLoop() {
   updateDyingEnemies(visualDt);
   updateAfterimages(visualDt);
 
-  const myId = getMyId();
-  const state = getState();
-  if (state && myId) {
-    const me = state.players.find(p => p.id === myId);
-    if (me) updateCamera(hasPrediction ? predictedX : me.pos[0], hasPrediction ? predictedZ : me.pos[2], lastInput.aimX, lastInput.aimZ);
-    updateOffscreenIndicators(state, myId);
+  // Reuse myId/state from gameActive block above
+  const camMyId = getMyId();
+  const camState = getState();
+  if (camState && camMyId) {
+    let camMe = null;
+    for (const p of camState.players) { if (p.id === camMyId) { camMe = p; break; } }
+    if (camMe) updateCamera(hasPrediction ? predictedX : camMe.pos[0], hasPrediction ? predictedZ : camMe.pos[2], lastInput.aimX, lastInput.aimZ);
+    updateOffscreenIndicators(camState, camMyId);
   } else {
     updateCamera(0, 0);
     updateOffscreenIndicators(null, null);
@@ -700,9 +717,10 @@ function processState(state, dt) {
     updateArenaRadius(currentArenaRadius);
   }
 
-  const serverPlayerIds = new Set(state.players.map(p => p.id));
+  _serverPlayerIds.clear();
+  for (const p of state.players) _serverPlayerIds.add(p.id);
   for (const [id] of knownPlayers) {
-    if (!serverPlayerIds.has(id)) { removePlayerMesh(id); knownPlayers.delete(id); }
+    if (!_serverPlayerIds.has(id)) { removePlayerMesh(id); knownPlayers.delete(id); }
   }
   for (const p of state.players) {
     if (!knownPlayers.has(p.id)) {
@@ -735,9 +753,10 @@ function processState(state, dt) {
     setPlayerDashing(p.id, p.id === myId ? (predDashTimer > 0 || p.dashing) : p.dashing);
   }
 
-  const serverEnemyIds = new Set(state.enemies.map(e => e.id));
+  _serverEnemyIds.clear();
+  for (const e of state.enemies) _serverEnemyIds.add(e.id);
   for (const id of knownEnemies) {
-    if (!serverEnemyIds.has(id)) { removeEnemyMesh(id); knownEnemies.delete(id); }
+    if (!_serverEnemyIds.has(id)) { removeEnemyMesh(id); knownEnemies.delete(id); }
   }
   for (const e of state.enemies) {
     if (!knownEnemies.has(e.id)) {
@@ -758,9 +777,10 @@ function processState(state, dt) {
   });
 
   // Sync projectiles (object pooled)
-  const serverProjIds = new Set((state.projectiles || []).map(p => p.id));
+  _serverProjIds.clear();
+  for (const p of (state.projectiles || [])) _serverProjIds.add(p.id);
   for (const [id, data] of knownProjectiles) {
-    if (!serverProjIds.has(id)) { releaseProj(data.mesh, data.isBullet); knownProjectiles.delete(id); }
+    if (!_serverProjIds.has(id)) { releaseProj(data.mesh, data.isBullet); knownProjectiles.delete(id); }
   }
   for (const pr of (state.projectiles || [])) {
     if (!knownProjectiles.has(pr.id)) {
@@ -774,9 +794,10 @@ function processState(state, dt) {
   }
 
   // Sync walls
-  const serverWallIds = new Set((state.walls || []).map(w => w.id));
+  _serverWallIds.clear();
+  for (const w of (state.walls || [])) _serverWallIds.add(w.id);
   for (const [id, data] of knownWalls) {
-    if (!serverWallIds.has(id)) {
+    if (!_serverWallIds.has(id)) {
       scene.remove(data.mesh);
       data.mat.dispose();
       spawnSparks(data.mesh.position.x, data.mesh.position.z, data.baseColor || 0x4488ff, 10);
@@ -908,10 +929,9 @@ function processState(state, dt) {
       }
     }
   }
-  // Clean stale near-miss entries
+  // Clean stale near-miss entries (reuse _serverEnemyIds already built above)
   if (nearMissed.size > 0) {
-    const liveIds = new Set(state.enemies.map(e => e.id));
-    for (const id of nearMissed) { if (!liveIds.has(id)) nearMissed.delete(id); }
+    for (const id of nearMissed) { if (!_serverEnemyIds.has(id)) nearMissed.delete(id); }
   }
 
   setBiome(state.wave);
@@ -1058,6 +1078,7 @@ function handleEvent(ev) {
     case 'gameover':
       gameActive = false;
       hasPrediction = false;
+      stopMusic();
       hideUpgradeShop();
       hideControlsHint();
       hideYouDied();

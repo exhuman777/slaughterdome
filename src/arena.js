@@ -198,15 +198,23 @@ export function updateArenaRadius(radius) {
   shrinkRingMat.opacity = 0.2 + Math.sin(Date.now() / 400) * 0.15;
 }
 
+// Pre-allocated Color objects for biome transitions (avoid per-frame allocation)
+const _tempColor = new THREE.Color();
+const _fromColor = new THREE.Color();
+const _toColor = new THREE.Color();
+
 export function updateBiome(dt) {
   if (targetBiome === currentBiome) return;
   biomeTransition += dt / 2;
   if (biomeTransition >= 1) { biomeTransition = 1; currentBiome = targetBiome; }
   const from = BIOMES[currentBiome];
   const to = BIOMES[targetBiome];
-  const c = new THREE.Color();
-  c.copy(new THREE.Color(from.floor)).lerp(new THREE.Color(to.floor), biomeTransition);
-  floorMesh.material.color.copy(c);
-  c.copy(new THREE.Color(from.wall)).lerp(new THREE.Color(to.wall), biomeTransition);
-  barrierMesh.material.color.copy(c);
+  _fromColor.set(from.floor);
+  _toColor.set(to.floor);
+  _tempColor.copy(_fromColor).lerp(_toColor, biomeTransition);
+  floorMesh.material.color.copy(_tempColor);
+  _fromColor.set(from.wall);
+  _toColor.set(to.wall);
+  _tempColor.copy(_fromColor).lerp(_toColor, biomeTransition);
+  barrierMesh.material.color.copy(_tempColor);
 }

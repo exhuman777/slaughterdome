@@ -16,7 +16,7 @@ const MONSTER_FILES = ['grunt', 'dasher', 'brute', 'spitter', 'swarm', 'shielder
 const monsterTemplates = {};
 let modelsLoaded = false;
 
-function dbg(msg) { console.log('[MONSTER]', msg); }
+function dbg() {}
 
 export async function loadMonsterModels() {
   dbg('Starting load...');
@@ -73,7 +73,6 @@ function cloneMonster(type) {
       // Subtle colored emissive per type -- NOT material.color (which is white for textured models)
       c.material.emissive = new THREE.Color(visual.color);
       c.material.emissiveIntensity = 0.15;
-      c.frustumCulled = false;
       c.castShadow = true;
       mats.push(c.material);
     }

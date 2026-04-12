@@ -64,5 +64,74 @@ export function playSword(combo) {
   noise(0.06, 1500 + combo * 500, 'highpass');
 }
 export function playWaveClear() { tone(523, 0.1, 0.15); setTimeout(() => tone(659, 0.1, 0.15), 80); setTimeout(() => tone(784, 0.12, 0.15), 160); setTimeout(() => tone(1047, 0.2, 0.12), 240); }
-export function toggleAudio() { enabled = !enabled; return enabled; }
 export function resumeAudio() { if (ctx && ctx.state === 'suspended') ctx.resume(); }
+
+// Background music system
+let musicGain = null;
+let musicSource = null;
+let musicBuffer = null;
+let musicPlaying = false;
+let musicVolume = 0.3;
+
+function canPlayOgg() {
+  const a = document.createElement('audio');
+  return a.canPlayType && a.canPlayType('audio/ogg; codecs="opus"') !== '';
+}
+
+async function loadMusicBuffer() {
+  if (musicBuffer) return musicBuffer;
+  const c = getCtx();
+  const url = canPlayOgg() ? 'music/loop.ogg' : 'music/loop.mp3';
+  try {
+    const resp = await fetch(url);
+    const arrayBuf = await resp.arrayBuffer();
+    musicBuffer = await c.decodeAudioData(arrayBuf);
+    return musicBuffer;
+  } catch (e) {
+    console.warn('Music load failed:', e);
+    return null;
+  }
+}
+
+export async function startMusic() {
+  if (!enabled || musicPlaying) return;
+  const c = getCtx();
+  const buf = await loadMusicBuffer();
+  if (!buf) return;
+
+  musicGain = c.createGain();
+  musicGain.gain.value = musicVolume;
+  musicGain.connect(c.destination);
+
+  musicSource = c.createBufferSource();
+  musicSource.buffer = buf;
+  musicSource.loop = true;
+  musicSource.connect(musicGain);
+  musicSource.start();
+  musicPlaying = true;
+}
+
+export function stopMusic() {
+  if (!musicPlaying || !musicSource) return;
+  const c = getCtx();
+  if (musicGain) {
+    musicGain.gain.setValueAtTime(musicGain.gain.value, c.currentTime);
+    musicGain.gain.linearRampToValueAtTime(0, c.currentTime + 0.5);
+  }
+  const src = musicSource;
+  setTimeout(() => { try { src.stop(); } catch (e) {} }, 600);
+  musicSource = null;
+  musicGain = null;
+  musicPlaying = false;
+}
+
+export function setMusicVolume(v) {
+  musicVolume = v;
+  if (musicGain) musicGain.gain.value = v;
+}
+
+export function toggleAudio() {
+  enabled = !enabled;
+  if (musicGain) musicGain.gain.value = enabled ? musicVolume : 0;
+  return enabled;
+}
