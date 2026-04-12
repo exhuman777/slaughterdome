@@ -20,21 +20,26 @@ function getMat(color) {
   return mat;
 }
 
-// Pre-allocated particle mesh pool
+// Pre-allocated particle mesh pool (lazy init after scene exists)
 const POOL_SIZE = 200;
 const meshPool = [];
 const activeParticles = [];
+let poolInitialized = false;
 
-// Pre-create all particle meshes at init, add to scene once
-for (let i = 0; i < POOL_SIZE; i++) {
-  const mesh = new THREE.Mesh(boxGeo, getMat(0xffffff));
-  mesh.visible = false;
-  mesh.position.y = -100;
-  scene.add(mesh);
-  meshPool.push(mesh);
+function ensurePool() {
+  if (poolInitialized || !scene) return;
+  poolInitialized = true;
+  for (let i = 0; i < POOL_SIZE; i++) {
+    const mesh = new THREE.Mesh(boxGeo, getMat(0xffffff));
+    mesh.visible = false;
+    mesh.position.y = -100;
+    scene.add(mesh);
+    meshPool.push(mesh);
+  }
 }
 
 function acquireMesh(geo, mat) {
+  ensurePool();
   if (meshPool.length > 0) {
     const mesh = meshPool.pop();
     mesh.geometry = geo;
@@ -58,25 +63,29 @@ function releaseMesh(mesh) {
   meshPool.push(mesh);
 }
 
-// Floating text sprite pool
+// Floating text sprite pool (lazy init)
 const TEXT_POOL_SIZE = 8;
 const MAX_ACTIVE_TEXTS = 3;
 const textPool = [];
 let activeTextCount = 0;
+let textPoolInitialized = false;
 
-// Pre-create canvases and sprites for floating text
-for (let i = 0; i < TEXT_POOL_SIZE; i++) {
-  const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 128;
-  const ctx = canvas.getContext('2d');
-  const tex = new THREE.CanvasTexture(canvas);
-  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true });
-  const sprite = new THREE.Sprite(mat);
-  sprite.visible = false;
-  sprite.position.y = -100;
-  scene.add(sprite);
-  textPool.push({ sprite, mat, tex, canvas, ctx, inUse: false });
+function ensureTextPool() {
+  if (textPoolInitialized || !scene) return;
+  textPoolInitialized = true;
+  for (let i = 0; i < TEXT_POOL_SIZE; i++) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    const tex = new THREE.CanvasTexture(canvas);
+    const mat = new THREE.SpriteMaterial({ map: tex, transparent: true });
+    const sprite = new THREE.Sprite(mat);
+    sprite.visible = false;
+    sprite.position.y = -100;
+    scene.add(sprite);
+    textPool.push({ sprite, mat, tex, canvas, ctx, inUse: false });
+  }
 }
 
 export function spawnKillParticles(x, z, color) {
@@ -197,6 +206,7 @@ export function spawnAoeRing(x, z, radius, color) {
 export function spawnFloatingText(x, z, text, color, scale, fontOverride) {
   if (activeParticles.length >= MAX_PARTICLES) return;
   if (activeTextCount >= MAX_ACTIVE_TEXTS) return;
+  ensureTextPool();
 
   // Find available text sprite from pool
   let slot = null;

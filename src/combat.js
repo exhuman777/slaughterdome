@@ -29,10 +29,11 @@ const swordSlashGeos = [0, 1, 2].map(() => {
   return g;
 });
 
-// Mesh pool for muzzle/ground flashes
+// Mesh pool for muzzle/ground flashes (lazy init)
 const POOL_SIZE = 12;
 const flashPool = [];
 const groundPool = [];
+let combatPoolInit = false;
 
 function createPooledMesh(geo, color) {
   const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0 });
@@ -43,12 +44,20 @@ function createPooledMesh(geo, color) {
   return { mesh, mat };
 }
 
-for (let i = 0; i < POOL_SIZE; i++) {
-  flashPool.push(createPooledMesh(muzzleFlashGeo, 0xffffcc));
-  groundPool.push(createPooledMesh(groundFlashGeo, 0xffffaa));
+function ensureCombatPool() {
+  if (combatPoolInit || !scene) return;
+  combatPoolInit = true;
+  for (let i = 0; i < POOL_SIZE; i++) {
+    flashPool.push(createPooledMesh(muzzleFlashGeo, 0xffffcc));
+    groundPool.push(createPooledMesh(groundFlashGeo, 0xffffaa));
+  }
+  for (let i = 0; i < SPECIAL_POOL_SIZE; i++) {
+    specialPool.push(createPooledMesh(specialWaveGeo, 0xffcc44));
+  }
 }
 
 function acquireFlash(pool) {
+  ensureCombatPool();
   for (const p of pool) {
     if (!p.mesh.visible) return p;
   }
@@ -107,13 +116,11 @@ export function showGunShot(px, pz, angle, weaponType) {
   }
 }
 
-// Special attack pool (pre-allocated meshes)
+// Special attack pool (lazy init via ensureCombatPool)
 const specialPool = [];
 const SPECIAL_POOL_SIZE = 25;
-for (let i = 0; i < SPECIAL_POOL_SIZE; i++) {
-  specialPool.push(createPooledMesh(specialWaveGeo, 0xffcc44));
-}
 function acquireSpecial() {
+  ensureCombatPool();
   for (const p of specialPool) {
     if (!p.mesh.visible) return p;
   }

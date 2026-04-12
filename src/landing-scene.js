@@ -1,9 +1,8 @@
 // Mini Three.js dome visualization for landing page
-// Shares the game's WebGPU renderer (no second GPU context)
+// Uses its own renderer targeting the dome-scene canvas, destroyed before game start
 import * as THREE from 'three/webgpu';
-import { renderer as gameRenderer } from './renderer.js';
 
-let domeScene, camera, active = false;
+let domeScene, camera, domeRenderer, active = false;
 let arenaRing, innerRing, player, flag, walls = [], enemies = [];
 let time = 0;
 const ARENA_MAX = 12;
@@ -11,11 +10,15 @@ const ARENA_MIN = 5;
 
 // Shared bullet geo/mat (not per-bullet)
 const bulletGeo = new THREE.SphereGeometry(0.08, 4, 4);
-const bulletMat = new THREE.MeshBasicMaterial({ color: 0xffee44, transparent: true });
+const bulletMatTemplate = new THREE.MeshBasicMaterial({ color: 0xffee44, transparent: true });
 
 export async function initDomeScene() {
   const canvas = document.getElementById('dome-scene');
-  if (!canvas || !gameRenderer) return;
+  if (!canvas) return;
+
+  domeRenderer = new THREE.WebGPURenderer({ canvas, antialias: true });
+  domeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  await domeRenderer.init();
 
   domeScene = new THREE.Scene();
   domeScene.background = new THREE.Color(0x0a0808);
@@ -132,21 +135,22 @@ export async function initDomeScene() {
 }
 
 function resize() {
-  const canvas = document.getElementById('dome-scene');
+  const canvas = domeRenderer ? domeRenderer.domElement : null;
   if (!canvas) return;
   const w = canvas.clientWidth;
   const h = canvas.clientHeight;
-  if (camera.aspect !== w / h) {
+  if (canvas.width !== w || canvas.height !== h) {
+    domeRenderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
   }
 }
 
-// Bullet pool (reuse meshes)
+// Bullet pool (reuse meshes, no per-bullet geo/mat allocation)
 const bulletPool = [];
 const BULLET_POOL_SIZE = 20;
 for (let i = 0; i < BULLET_POOL_SIZE; i++) {
-  const mesh = new THREE.Mesh(bulletGeo, bulletMat.clone());
+  const mesh = new THREE.Mesh(bulletGeo, bulletMatTemplate.clone());
   mesh.visible = false;
   bulletPool.push(mesh);
 }
@@ -225,13 +229,17 @@ function animate() {
   updateBullets();
 
   resize();
-  // Render dome scene using the shared game renderer
-  if (gameRenderer) gameRenderer.render(domeScene, camera);
+  if (domeRenderer) domeRenderer.render(domeScene, camera);
 }
 
 export function stopDomeScene() {
   active = false;
-  // Clean up bullet refs from dome scene
+  // Clean up bullets
   for (const b of activeBullets) b.visible = false;
   activeBullets.length = 0;
+  // Dispose the dome renderer to free the GPU context
+  if (domeRenderer) {
+    domeRenderer.dispose();
+    domeRenderer = null;
+  }
 }
