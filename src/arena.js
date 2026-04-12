@@ -10,7 +10,7 @@ const BIOMES = {
   inferno: { floor: 0x4a2a1a, wall: 0xaa4433 },
   frozen:  { floor: 0x2a4455, wall: 0x7799aa },
   toxic:   { floor: 0x1a3a1a, wall: 0x448844 },
-  void:    { floor: 0x1a1a33, wall: 0x554477 },
+  void:    { floor: 0x2a2a44, wall: 0x665588 },
 };
 
 let currentBiome = 'stone';

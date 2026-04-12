@@ -280,6 +280,10 @@ function setPerfMode(playerCount) {
 // Persistent corpses / blood pools
 const corpses = [];
 const MAX_CORPSES = 60;
+
+// Kill effect throttle -- max 3 full kill effects per frame to prevent freezes
+let killEffectsThisFrame = 0;
+const MAX_KILL_EFFECTS_PER_FRAME = 3;
 const corpseGeos = [
   (() => { const g = new THREE.CircleGeometry(0.6, 8); g.rotateX(-Math.PI / 2); return g; })(),
   (() => { const g = new THREE.CircleGeometry(0.8, 10); g.rotateX(-Math.PI / 2); return g; })(),
@@ -673,6 +677,7 @@ function gameLoop() {
       updatePing(getPing());
     }
 
+    killEffectsThisFrame = 0;
     const events = drainEvents();
     for (const ev of events) handleEvent(ev);
 
@@ -952,9 +957,11 @@ function handleEvent(ev) {
       break;
     }
     case 'kill': {
-      if (!perfMode) spawnGoreChunks(ev.pos[0], ev.pos[2]);
-      spawnKillParticles(ev.pos[0], ev.pos[2], 0xff4444);
-      if (!perfMode) spawnBloodDrops(ev.pos[0], ev.pos[2]);
+      killEffectsThisFrame++;
+      const fullEffects = killEffectsThisFrame <= MAX_KILL_EFFECTS_PER_FRAME;
+      if (fullEffects && !perfMode) spawnGoreChunks(ev.pos[0], ev.pos[2]);
+      if (fullEffects) spawnKillParticles(ev.pos[0], ev.pos[2], 0xff4444);
+      if (fullEffects && !perfMode) spawnBloodDrops(ev.pos[0], ev.pos[2]);
       playKill();
       // Blood pool decal (varied size and color)
       const bcolor = BLOOD_COLORS[Math.floor(Math.random() * BLOOD_COLORS.length)];
@@ -975,7 +982,7 @@ function handleEvent(ev) {
       let multiplier = 1;
       for (const t of COMBO_TIER_THRESHOLDS) { if (combo >= t) multiplier = 1 + (COMBO_TIER_THRESHOLDS.indexOf(t) + 1) * 0.1; }
       const pts = Math.floor((10 + wave * 2) * multiplier);
-      spawnFloatingText(ev.pos[0] + 1.5, ev.pos[2], '+' + pts, '#e6993a', 2);
+      if (fullEffects) spawnFloatingText(ev.pos[0] + 1.5, ev.pos[2], '+' + pts, '#e6993a', 2);
       break;
     }
     case 'hit': {

@@ -172,7 +172,12 @@ function updatePlayers(room, dt) {
       const push = wallPush(p.x, p.z, w, 0.5);
       if (push) { p.x += push.x; p.z += push.z; }
     }
-    // Player-obstacle collision removed (trees/env are visual only)
+    // Water pool collision (water blocks movement, trees are visual only)
+    for (const ob of room.obstacles) {
+      if (ob.type !== 'water' || !ob.active) continue;
+      const push = obstaclePush(p.x, p.z, ob, 0.5);
+      if (push) { p.x += push.x; p.z += push.z; }
+    }
     // NaN guard
     if (isNaN(p.x) || isNaN(p.z)) { p.x = 0; p.z = 0; }
     const dist = Math.sqrt(p.x * p.x + p.z * p.z);
@@ -544,7 +549,12 @@ function updateEnemies(room, dt) {
         }
       }
     }
-    // Enemy-obstacle collision removed (trees/env are visual only)
+    // Water pool collision for enemies
+    for (const ob of room.obstacles) {
+      if (ob.type !== 'water' || !ob.active) continue;
+      const push = obstaclePush(e.x, e.z, ob, 0.8);
+      if (push) { e.x += push.x; e.z += push.z; }
+    }
     // NaN guard for enemies
     if (isNaN(e.x) || isNaN(e.z)) { e.x = 0; e.z = 0; }
     const edist = Math.sqrt(e.x * e.x + e.z * e.z);
