@@ -20,26 +20,11 @@ function getMat(color) {
   return mat;
 }
 
-// Pre-allocated particle mesh pool (lazy init after scene exists)
-const POOL_SIZE = 200;
+// Particle mesh pool (no eager init -- meshes created on demand, recycled on release)
 const meshPool = [];
 const activeParticles = [];
-let poolInitialized = false;
-
-function ensurePool() {
-  if (poolInitialized || !scene) return;
-  poolInitialized = true;
-  for (let i = 0; i < POOL_SIZE; i++) {
-    const mesh = new THREE.Mesh(boxGeo, getMat(0xffffff));
-    mesh.visible = false;
-    mesh.position.y = -100;
-    scene.add(mesh);
-    meshPool.push(mesh);
-  }
-}
 
 function acquireMesh(geo, mat) {
-  ensurePool();
   if (meshPool.length > 0) {
     const mesh = meshPool.pop();
     mesh.geometry = geo;
@@ -47,9 +32,9 @@ function acquireMesh(geo, mat) {
     mesh.visible = true;
     mesh.scale.set(1, 1, 1);
     mesh.rotation.set(0, 0, 0);
+    if (!mesh.parent) scene.add(mesh);
     return mesh;
   }
-  // Overflow: create new (rare)
   const mesh = new THREE.Mesh(geo, mat);
   scene.add(mesh);
   return mesh;
@@ -63,29 +48,30 @@ function releaseMesh(mesh) {
   meshPool.push(mesh);
 }
 
-// Floating text sprite pool (lazy init)
-const TEXT_POOL_SIZE = 8;
+// Floating text sprite pool (created on demand, recycled)
 const MAX_ACTIVE_TEXTS = 3;
 const textPool = [];
 let activeTextCount = 0;
-let textPoolInitialized = false;
 
-function ensureTextPool() {
-  if (textPoolInitialized || !scene) return;
-  textPoolInitialized = true;
-  for (let i = 0; i < TEXT_POOL_SIZE; i++) {
-    const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 128;
-    const ctx = canvas.getContext('2d');
-    const tex = new THREE.CanvasTexture(canvas);
-    const mat = new THREE.SpriteMaterial({ map: tex, transparent: true });
-    const sprite = new THREE.Sprite(mat);
-    sprite.visible = false;
-    sprite.position.y = -100;
-    scene.add(sprite);
-    textPool.push({ sprite, mat, tex, canvas, ctx, inUse: false });
+function acquireTextSlot() {
+  // Reuse existing free slot
+  for (const s of textPool) {
+    if (!s.inUse) return s;
   }
+  // Create new slot on demand
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  const tex = new THREE.CanvasTexture(canvas);
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true });
+  const sprite = new THREE.Sprite(mat);
+  sprite.visible = false;
+  sprite.position.y = -100;
+  scene.add(sprite);
+  const slot = { sprite, mat, tex, canvas, ctx, inUse: false };
+  textPool.push(slot);
+  return slot;
 }
 
 export function spawnKillParticles(x, z, color) {
@@ -206,13 +192,8 @@ export function spawnAoeRing(x, z, radius, color) {
 export function spawnFloatingText(x, z, text, color, scale, fontOverride) {
   if (activeParticles.length >= MAX_PARTICLES) return;
   if (activeTextCount >= MAX_ACTIVE_TEXTS) return;
-  ensureTextPool();
 
-  // Find available text sprite from pool
-  let slot = null;
-  for (const s of textPool) {
-    if (!s.inUse) { slot = s; break; }
-  }
+  const slot = acquireTextSlot();
   if (!slot) return;
 
   // Reuse canvas context

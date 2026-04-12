@@ -29,11 +29,9 @@ const swordSlashGeos = [0, 1, 2].map(() => {
   return g;
 });
 
-// Mesh pool for muzzle/ground flashes (lazy init)
-const POOL_SIZE = 12;
+// Mesh pool for combat effects (created on demand, recycled)
 const flashPool = [];
 const groundPool = [];
-let combatPoolInit = false;
 
 function createPooledMesh(geo, color) {
   const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0 });
@@ -44,24 +42,14 @@ function createPooledMesh(geo, color) {
   return { mesh, mat };
 }
 
-function ensureCombatPool() {
-  if (combatPoolInit || !scene) return;
-  combatPoolInit = true;
-  for (let i = 0; i < POOL_SIZE; i++) {
-    flashPool.push(createPooledMesh(muzzleFlashGeo, 0xffffcc));
-    groundPool.push(createPooledMesh(groundFlashGeo, 0xffffaa));
-  }
-  for (let i = 0; i < SPECIAL_POOL_SIZE; i++) {
-    specialPool.push(createPooledMesh(specialWaveGeo, 0xffcc44));
-  }
-}
-
-function acquireFlash(pool) {
-  ensureCombatPool();
+function acquireFromPool(pool, geo, color) {
   for (const p of pool) {
     if (!p.mesh.visible) return p;
   }
-  return null;
+  // Create new on demand
+  const entry = createPooledMesh(geo, color);
+  pool.push(entry);
+  return entry;
 }
 
 export function showGunShot(px, pz, angle, weaponType) {
@@ -85,7 +73,7 @@ export function showGunShot(px, pz, angle, weaponType) {
   const isShotgun = weaponType === 'shotgun';
 
   // Muzzle flash from pool
-  const fp = acquireFlash(flashPool);
+  const fp = acquireFromPool(flashPool, isShotgun ? muzzleFlashGeoLarge : muzzleFlashGeo, 0xffffcc);
   if (fp) {
     fp.mesh.geometry = isShotgun ? muzzleFlashGeoLarge : muzzleFlashGeo;
     fp.mesh.position.set(fx, 1.2, fz);
@@ -96,7 +84,7 @@ export function showGunShot(px, pz, angle, weaponType) {
   }
 
   // Ground flash from pool
-  const gp = acquireFlash(groundPool);
+  const gp = acquireFromPool(groundPool, isShotgun ? groundFlashGeoLarge : groundFlashGeo, 0xffffaa);
   if (gp) {
     gp.mesh.geometry = isShotgun ? groundFlashGeoLarge : groundFlashGeo;
     gp.mesh.position.set(fx, 0.05, fz);
@@ -116,15 +104,10 @@ export function showGunShot(px, pz, angle, weaponType) {
   }
 }
 
-// Special attack pool (lazy init via ensureCombatPool)
+// Special attack pool (on demand)
 const specialPool = [];
-const SPECIAL_POOL_SIZE = 25;
 function acquireSpecial() {
-  ensureCombatPool();
-  for (const p of specialPool) {
-    if (!p.mesh.visible) return p;
-  }
-  return null;
+  return acquireFromPool(specialPool, specialWaveGeo, 0xffcc44);
 }
 
 export function showSpecialAttack(x, z) {
