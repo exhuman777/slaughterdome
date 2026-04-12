@@ -83,7 +83,7 @@ export const OBSTACLES = {
   waterSeparation: 10,
 };
 
-export const ARENA_SHRINK_PER_WAVE = 2;
+export const ARENA_SHRINK_PER_WAVE = 3;
 export const ARENA_MIN_RADIUS = 12;
 export const ARENA_OUTSIDE_DPS = 5;
 
